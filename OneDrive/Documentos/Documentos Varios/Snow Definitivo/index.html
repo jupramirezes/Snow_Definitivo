@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script src="./config.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Control Bar · PWA (Supabase)</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111111">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <style>
+    :root { --pad: 14px; }
+    body { background:#f7f7f8; }
+    .app { max-width: 1080px; margin: 0 auto; padding: var(--pad); }
+    .tile { padding: 16px; border-radius: 16px; border:1px solid #eee; background:#fff; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+    .btn-fat { padding: 14px 16px; font-size: 18px; border-radius: 14px; }
+    .kpi { border-radius: 14px; padding: 10px 12px; background:#fff; border: 1px solid #eee; }
+    .kpi .v { font-weight:700; font-size: 18px; }
+    .pos-pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background:#111; color:#fff; }
+    .pos-Barra { background: #0d6efd; }
+    .pos-Granizados { background: #198754; }
+    .table-sm td, .table-sm th { padding: .45rem .5rem; }
+    .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #eee; padding: 8px 12px; z-index: 1000; }
+  </style>
+  <script>
+    // TODO: reemplazar por variables de entorno en Vercel si quieres
+    window.SUPABASE_URL = window.SUPABASE_URL || "{{SUPABASE_URL}}";
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "{{SUPABASE_ANON_KEY}}";
+  </script>
+</head>
+<body>
+<div class="app">
+  <header class="d-flex justify-content-between align-items-center mb-2">
+    <h4 class="m-0">Control Bar · PWA</h4>
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label m-0">Fecha</label>
+      <input id="appDate" type="date" class="form-control form-control-sm" style="min-width:150px">
+      <button id="btnReset" class="btn btn-sm btn-outline-secondary">Reset local</button>
+    </div>
+    <div class="d-flex gap-2">
+      <button id="btnReset" class="btn btn-sm btn-outline-secondary">Reset local</button>
+    </div>
+  </header>
+
+  <section id="home" class="tile">
+    <div class="row g-2">
+      <div class="col-12 col-md-4"><button class="w-100 btn btn-dark btn-fat" data-goto="mesero">Mesero · Venta rápida</button></div>
+      <div class="col-12 col-md-4"><button class="w-100 btn btn-dark btn-fat" data-goto="pos">Barra/Granizados · Inventario + Compras + Gastos</button></div>
+      <div class="col-12 col-md-4"><button class="w-100 btn btn-dark btn-fat" data-goto="socios">Socios · Cierres + Reparto</button></div>
+    </div>
+  </section>
+
+  <!-- Mesero: Venta rápida -->
+  <section id="mesero" class="tile mt-3" hidden>
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="m-0">Ventas (Mesero)</h5>
+      <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
+    </div>
+    <div class="row g-2 mt-2">
+      <div class="col-6">
+        <label class="form-label">POS</label>
+        <select id="ventaPOS" class="form-select form-select-lg"><option>Barra</option><option>Granizados</option></select>
+      </div>
+      <div class="col-6">
+        <label class="form-label">Producto</label>
+        <select id="ventaProd" class="form-select form-select-lg"></select>
+      </div>
+      <div class="col-4">
+        <label class="form-label">Cant.</label>
+        <input id="ventaCant" type="number" min="1" value="1" class="form-control form-control-lg">
+      </div>
+      <div class="col-4">
+        <label class="form-label">Pago</label>
+        <select id="ventaPago" class="form-select form-select-lg"><option>Efectivo</option><option>Transferencia</option></select>
+      </div>
+      <div class="col-4">
+        <label class="form-label">Notas</label>
+        <input id="ventaNotas" class="form-control form-control-lg" placeholder="Mesa/promo">
+      </div>
+      <div class="col-6">
+        <label class="form-label">Desc. socio</label>
+        <input id="ventaDescSoc" type="number" min="0" value="0" class="form-control form-control-lg">
+      </div>
+      <div class="col-6">
+        <label class="form-label">Descuadre</label>
+        <input id="ventaDescuadre" type="number" min="0" value="0" class="form-control form-control-lg">
+      </div>
+      <div class="col-12 d-grid">
+        <button id="btnAddVenta" class="btn btn-success btn-fat mt-2">Agregar venta</button>
+      </div>
+    </div>
+    <div class="table-responsive mt-3">
+      <table class="table table-sm" id="tblVentas"><thead><tr><th>Fecha</th><th>Hora</th><th>POS</th><th>Producto</th><th>Cant</th><th>Pago</th><th>Desc</th><th>Descuadre</th><th>Total</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <!-- POS -->
+  <section id="pos" class="tile mt-3" hidden>
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="m-0">Inventario · Compras · Gastos</h5>
+      <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
+    </div>
+    <div class="row g-2 mt-2">
+      <div class="col-12 col-lg-6 tile">
+        <h6>Inventario del día</h6>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label">POS</label><select id="invPOS" class="form-select"><option>Barra</option><option>Granizados</option></select></div>
+          <div class="col-6 d-grid"><button id="btnCargarConteo" class="btn btn-outline-dark mt-4">Cargar lista POS</button></div>
+          <div class="col-12"><label class="form-label">Inicial</label><div id="invInicial"></div></div>
+          <div class="col-12 d-grid"><button id="btnGuardarInicial" class="btn btn-dark">Guardar inventario inicial</button></div>
+          <hr/>
+          <div class="col-12"><label class="form-label">Final</label><div id="invFinal"></div></div>
+          <div class="col-12 d-grid"><button id="btnGuardarFinal" class="btn btn-dark">Guardar inventario final</button></div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="tile">
+          <h6>Compras</h6>
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label">Producto</label><select id="compraProd" class="form-select"></select></div>
+            <div class="col-3"><label class="form-label">Cant</label><input id="compraCant" type="number" min="1" value="1" class="form-control"/></div>
+            <div class="col-3"><label class="form-label">PU</label><input id="compraPU" type="number" min="0" value="0" class="form-control"/></div>
+            <div class="col-12"><label class="form-label">Factura (foto)</label><input id="compraFile" type="file" accept="image/*" class="form-control"/></div>
+            <div class="col-12"><input id="compraNotas" class="form-control" placeholder="Notas"/></div>
+            <div class="col-12 d-grid"><button id="btnAddCompra" class="btn btn-primary">Agregar compra</button></div>
+          </div>
+        </div>
+        <div class="tile mt-3">
+          <h6>Gastos</h6>
+          <div class="row g-2">
+            <div class="col-4"><select id="gastoTipo" class="form-select"><option value="Gasto">Gasto</option><option value="Nomina">Nómina</option><option value="DescuentoSocio">DescuentoSocio</option></select></div>
+            <div class="col-4"><input id="gastoConcepto" class="form-control" placeholder="Concepto"/></div>
+            <div class="col-4"><input id="gastoValor" type="number" min="0" class="form-control" placeholder="Valor"/></div>
+            <div class="col-6"><input id="gastoAtrib" class="form-control" placeholder="Socio/Persona"/></div>
+            <div class="col-6"><input id="gastoNotas" class="form-control" placeholder="Notas"/></div>
+            <div class="col-12 d-grid"><button id="btnAddGasto" class="btn btn-warning">Agregar gasto</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Socios -->
+  <section id="socios" class="tile mt-3" hidden>
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="m-0">Cierres + Reparto</h5>
+      <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
+    </div>
+    <div class="row g-2 mt-2">
+      <div class="col-12 tile">
+        <h6>Cierre diario</h6>
+        <div class="d-flex gap-2">
+          <input type="date" id="fechaDia" class="form-control" style="max-width:200px">
+          <button id="btnCierreDia" class="btn btn-dark">Generar</button>
+        </div>
+        <div id="cierreDia" class="mt-3"></div>
+      </div>
+      <div class="col-12 tile mt-3">
+        <h6>Cierre semanal + reparto</h6>
+        <div class="d-flex gap-2">
+          <input type="date" id="semDesde" class="form-control" style="max-width:200px">
+          <input type="date" id="semHasta" class="form-control" style="max-width:200px">
+          <button id="btnCierreSem" class="btn btn-dark">Generar</button>
+        </div>
+        <div class="row g-2 mt-2">
+          <div class="col-12 col-lg-6"><div id="cierreSemResumen"></div></div>
+          <div class="col-12 col-lg-6"><div id="cierreReparto"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="sticky-footer d-flex justify-content-between align-items-center">
+  <div class="small text-muted">Instálala como PWA (Agregar a pantalla de inicio). Guarda en Supabase.</div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" data-goto="home">Inicio</button>
+  </div>
+</div>
+
+<div id="health" style="position:fixed;right:8px;bottom:8px;font:12px system-ui;background:#111;color:#fff;padding:6px 10px;border-radius:8px;opacity:.9;z-index:9999">Cargando…</div>
+<script type="module">
+  import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+  const ok = (t)=>{ const el=document.getElementById('health'); el.textContent=t; el.style.background='#198754'; };
+  const bad = (t)=>{ const el=document.getElementById('health'); el.textContent=t; el.style.background='#dc3545'; };
+  try{
+    const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    const { error } = await supabase.from('products').select('id', { count: 'exact', head: true });
+    if(error) bad('Supabase: ERROR'); else ok('Supabase: OK');
+    setTimeout(()=>document.getElementById('health').remove(), 2500);
+  }catch(e){ bad('JS error'); }
+</script>
+  
+<script type="module">
+  import { supabase, q, money, addSale, addPurchase, addExpense, upsertCounts, fetchDayClose, fetchRangeClose } from './supabaseClient.js';
+  // ==== Fecha local consistente + getter del selector ====
+const localISODate = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0,10);
+};
+const getSelectedDate = () => document.getElementById('appDate').value || localISODate();
+document.getElementById('appDate').value = localISODate();
+// refrescar vistas que dependan de la fecha cuando cambie:
+document.getElementById('appDate').addEventListener('change', () => {
+  if (typeof renderVentas === 'function') renderVentas();
+  // (en el siguiente paso activamos también: renderCompras(), renderGastos(), renderInventario())
+});
+
+  const goto = (id)=>['home','mesero','pos','socios'].forEach(s=>document.getElementById(s).hidden=(s!==id));
+  document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>goto(b.dataset.goto));
+  goto('home');
+
+  // Load products
+  let products = [];
+  async function loadProducts(){
+    const { data, error } = await supabase.from('products').select('id, sku, name, pos, type, price, vasos_per_unit, active').eq('active', true).order('pos, name');
+    if(error){ alert('Error cargando catálogo'); return; }
+    products = data || [];
+    rebuildSelects();
+  }
+  function rebuildSelects(){
+    const pos = document.getElementById('ventaPOS').value;
+    document.getElementById('ventaProd').innerHTML = products.filter(p=>p.pos===pos && p.type==='producto').map(p=>`<option value="${p.id}">${p.name} (${p.sku})</option>`).join('');
+    document.getElementById('compraProd').innerHTML = products.map(p=>`<option value="${p.id}">${p.name} (${p.sku})</option>`).join('');
+  }
+  document.getElementById('ventaPOS').addEventListener('change', rebuildSelects);
+
+  // Add sale
+  document.getElementById('btnAddVenta').addEventListener('click', async()=>{
+    const pos = document.getElementById('ventaPOS').value;
+    const product_id = document.getElementById('ventaProd').value;
+    const qty = +document.getElementById('ventaCant').value || 1;
+    const pay_method = document.getElementById('ventaPago').value;
+    const notes = document.getElementById('ventaNotas').value.trim();
+    const discount_partner = +document.getElementById('ventaDescSoc').value || 0;
+    const shortage = +document.getElementById('ventaDescuadre').value || 0;
+    const date = getSelectedDate();
+    const time = new Date().toTimeString().slice(0,8);
+    try{
+      await addSale({date,time,pos,product_id,qty,pay_method,discount_partner,shortage,notes});
+      await renderVentasHoy();
+      alert('Venta registrada');
+    }catch(e){ console.error(e); alert('Error guardando venta'); }
+  });
+
+  async function renderVentasHoy(){
+    const d = getSelectedDate();
+    const { data, error } = await supabase.from('sales').select('*, products(name,price,pos)').eq('date', d).order('time');
+    const tb = document.querySelector('#tblVentas tbody'); tb.innerHTML='';
+    (data||[]).forEach(v=>{
+      const total = (v.products?.price||0)*v.qty - (v.discount_partner||0) - (v.shortage||0);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${v.date}</td><td>${v.time}</td><td><span class="pos-pill pos-${v.pos}">${v.pos}</span></td><td>${v.products?.name||''}</td><td>${v.qty}</td><td>${v.pay_method}</td><td>${money(v.discount_partner||0)}</td><td>${money(v.shortage||0)}</td><td>${money(total)}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+
+  // Inventory counts
+  function tableCounts(pos, tipo){
+    const items = products.filter(p=>p.pos===pos && p.type==='producto');
+    const rows = items.map(p=>`
+      <tr><td>${p.sku}</td><td>${p.name}</td>
+      <td style="width:120px"><input class="form-control form-control-sm" type="number" value="0" data-pid="${p.id}" data-tipo="${tipo}"/></td></tr>`).join('');
+    return `<table class="table table-sm"><thead><tr><th>SKU</th><th>Producto</th><th>Cantidad</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  document.getElementById('btnCargarConteo').addEventListener('click', ()=>{
+    const pos = document.getElementById('invPOS').value;
+    document.getElementById('invInicial').innerHTML = tableCounts(pos,'inicial');
+    document.getElementById('invFinal').innerHTML = tableCounts(pos,'final');
+  });
+  document.getElementById('btnGuardarInicial').addEventListener('click', async()=>{
+    const pos = document.getElementById('invPOS').value;
+    const date = new Date().toISOString().slice(0,10);
+    const rows = Array.from(document.querySelectorAll('#invInicial input[data-tipo="inicial"]')).map(inp=>({product_id:inp.dataset.pid, initial_qty:+inp.value||0, final_qty:0}));
+    try{ await upsertCounts({date,pos,rows}); alert('Inventario inicial guardado'); }catch(e){ alert('Error guardando inicial'); }
+  });
+  document.getElementById('btnGuardarFinal').addEventListener('click', async()=>{
+    const pos = document.getElementById('invPOS').value;
+    const date = new Date().toISOString().slice(0,10);
+    const rows = Array.from(document.querySelectorAll('#invFinal input[data-tipo="final"]')).map(inp=>({product_id:inp.dataset.pid, final_qty:+inp.value||0}));
+    // necesitamos leer las filas existentes para conservar initial_qty
+    // simple: por cada row hacemos upsert con initial_qty=coalesce(actual,0)
+    for(const r of rows){
+      const { data: curr } = await supabase.from('inventory_counts').select('initial_qty').eq('count_date', date).eq('pos', pos).eq('product_id', r.product_id).single();
+      const initial_qty = curr?.initial_qty || 0;
+      await supabase.from('inventory_counts').upsert({ count_date: date, pos, product_id: r.product_id, initial_qty, final_qty: r.final_qty }, { onConflict: 'count_date,pos,product_id' });
+    }
+    alert('Inventario final guardado');
+  });
+
+  // Purchases
+  document.getElementById('btnAddCompra').addEventListener('click', async()=>{
+    const product_id = document.getElementById('compraProd').value;
+    const qty = +document.getElementById('compraCant').value||0;
+    const unit_cost = +document.getElementById('compraPU').value||0;
+    const notes = document.getElementById('compraNotas').value.trim();
+    const file = document.getElementById('compraFile').files[0]||null;
+    const date = new Date().toISOString().slice(0,10);
+    const pos = products.find(p=>p.id===product_id)?.pos || 'Barra';
+    try{
+      await addPurchase({date,pos,product_id,qty,unit_cost,notes,file});
+      alert('Compra registrada');
+      document.getElementById('compraCant').value=1; document.getElementById('compraPU').value=0; document.getElementById('compraNotas').value=''; document.getElementById('compraFile').value='';
+    }catch(e){ console.error(e); alert('Error guardando compra'); }
+  });
+
+  // Expenses
+  document.getElementById('btnAddGasto').addEventListener('click', async()=>{
+    const type = document.getElementById('gastoTipo').value;
+    const concept = document.getElementById('gastoConcepto').value.trim();
+    const amount = +document.getElementById('gastoValor').value||0;
+    const attributed_to = document.getElementById('gastoAtrib').value.trim();
+    const notes = document.getElementById('gastoNotas').value.trim();
+    const date = new Date().toISOString().slice(0,10);
+    try{ await addExpense({date,type,concept,amount,attributed_to,notes}); alert('Gasto registrado'); }catch(e){ alert('Error guardando gasto'); }
+  });
+
+  // Cierres
+  document.getElementById('btnCierreDia').addEventListener('click', async()=>{
+    const f = document.getElementById('fechaDia').value || new Date().toISOString().slice(0,10);
+    const { sales, expenses } = await fetchDayClose(f);
+    const porPOS = (pos) => (sales||[]).filter(x=>x.pos===pos).reduce((acc,cur)=>{
+      const price = cur.products?.price||0;
+      const neto = price*cur.qty - (cur.discount_partner||0) - (cur.shortage||0);
+      acc.total += neto; if(cur.pay_method==='Efectivo') acc.ef += neto; else acc.tr += neto;
+      acc.desc += cur.discount_partner||0; acc.desq += cur.shortage||0;
+      return acc;
+    }, {total:0, ef:0, tr:0, desc:0, desq:0});
+    const barra = porPOS('Barra'); const grz = porPOS('Granizados');
+
+    let gto=0, nom=0, dss=0;
+    (expenses||[]).forEach(e=>{ if(e.type==='Gasto') gto+=e.amount; else if(e.type==='Nomina') nom+=e.amount; else if(e.type==='DescuentoSocio') dss+=e.amount; });
+
+    document.getElementById('cierreDia').innerHTML = `
+      <div class="row g-2">
+        <div class="col-12 col-lg-6"><div class="tile"><h6>Barra</h6><div>Total: <b>${money(barra.total)}</b></div><div>Efectivo: ${money(barra.ef)} · Transf: ${money(barra.tr)}</div><div>Desc: ${money(barra.desc)} · Descuadre: ${money(barra.desq)}</div></div></div>
+        <div class="col-12 col-lg-6"><div class="tile"><h6>Granizados</h6><div>Total: <b>${money(grz.total)}</b></div><div>Efectivo: ${money(grz.ef)} · Transf: ${money(grz.tr)}</div><div>Desc: ${money(grz.desc)} · Descuadre: ${money(grz.desq)}</div></div></div>
+      </div>
+      <div class="tile mt-2"><h6>Gastos del día</h6><div>Gastos: <b>${money(gto)}</b> · Nómina: <b>${money(nom)}</b> · Descuento socios: <b>${money(dss)}</b></div></div>`;
+  });
+
+  document.getElementById('btnCierreSem').addEventListener('click', async()=>{
+    const d = document.getElementById('semDesde').value, h = document.getElementById('semHasta').value;
+    if(!d || !h) return alert('Selecciona fechas');
+    const { sales, expenses, counts, managers, partners } = await fetchRangeClose(d,h);
+
+    // Ventas netas
+    let total=0, ef=0, tr=0, desc=0, desq=0;
+    (sales||[]).forEach(s=>{
+      const price = s.products?.price||0;
+      const neto = price*s.qty - (s.discount_partner||0) - (s.shortage||0);
+      total += neto; if(s.pay_method==='Efectivo') ef+=neto; else tr+=neto;
+      desc += s.discount_partner||0; desq += s.shortage||0;
+    });
+
+    // Gastos
+    let gto=0, nom=0, dss=0; const expBySoc = {};
+    (expenses||[]).forEach(e=>{
+      if(e.type==='Gasto') gto+=e.amount; else if(e.type==='Nomina') nom+=e.amount; else if(e.type==='DescuentoSocio') dss+=e.amount;
+      if(e.attributed_to){ expBySoc[e.attributed_to] = (expBySoc[e.attributed_to]||0) + e.amount; }
+    });
+
+    const utilidad = total - (gto+nom+dss);
+
+    // Reparto
+    const repRows = (partners||[]).map(p=>{
+      const base = utilidad * (Number(p.share_pct||0)/100);
+      const ajustes = -(expBySoc[p.name]||0);
+      const final = base + ajustes;
+      return { name:p.name, pct: p.share_pct, base, ajustes, final };
+    });
+
+    // Deudas descuadre por encargado
+    const encBarra = (managers||[]).find(m=>m.pos==='Barra')?.manager_name || 'Encargado Barra';
+    const encGrz = (managers||[]).find(m=>m.pos==='Granizados')?.manager_name || 'Encargado Granizados';
+    const desBarra = (sales||[]).filter(s=>s.pos==='Barra').reduce((a,b)=>a+(b.shortage||0),0);
+    const desGrz = (sales||[]).filter(s=>s.pos==='Granizados').reduce((a,b)=>a+(b.shortage||0),0);
+
+    document.getElementById('cierreSemResumen').innerHTML = `
+      <div class="tile">
+        <div>${d} a ${h}</div>
+        <div class="mt-1">Ventas: <b>${money(total)}</b> · Efectivo: ${money(ef)} · Transf: ${money(tr)}</div>
+        <div>Desc (ventas): ${money(desc)} · Descuadres: ${money(desq)}</div>
+        <div>Gastos: ${money(gto)} · Nómina: ${money(nom)} · Desc. Socios: ${money(dss)}</div>
+        <div class="mt-1">Utilidad neta: <b>${money(utilidad)}</b></div>
+        <div class="mt-1"><b>Deudas</b> · ${encBarra}: ${money(desBarra)} · ${encGrz}: ${money(desGrz)}</div>
+      </div>`;
+
+    document.getElementById('cierreReparto').innerHTML = `
+      <div class="tile">
+        <h6>Reparto por socio</h6>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead><tr><th>Socio</th><th>%</th><th>Base</th><th>Ajustes</th><th>Total</th></tr></thead>
+            <tbody>
+              ${repRows.map(r=>`<tr><td>${r.name}</td><td>${r.pct}%</td><td>${money(r.base)}</td><td>${money(r.ajustes)}</td><td><b>${money(r.final)}</b></td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('ventaPOS').addEventListener('change', ()=>{
+    const pos = document.getElementById('ventaPOS').value;
+    document.getElementById('ventaProd').innerHTML = products.filter(p=>p.pos===pos && p.type==='producto').map(p=>`<option value="${p.id}">${p.name} (${p.sku})</option>`).join('');
+  });
+
+  document.getElementById('btnReset').addEventListener('click', ()=>{
+    if('caches' in window){ caches.keys().then(keys=>keys.forEach(k=>caches.delete(k))); }
+    alert('Cache PWA limpiada. (Los datos viven en Supabase)');
+  });
+
+  // init
+  await loadProducts();
+  await renderVentasHoy();
+
+  // PWA SW register
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js'); }
+</script>
+</body>
+</html>
