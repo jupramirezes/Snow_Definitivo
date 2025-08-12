@@ -1,16 +1,11 @@
-const CACHE = 'control-bar-pwa-v6'; // súbelo de v1 a v3
+const CACHE = 'control-bar-pwa-v6';
 const ASSETS = ['./','./index.html','./manifest.json','./supabaseClient.js'];
-self.addEventListener('install', (e) => { self.skipWaiting(); });
+
+self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); });
 self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-});
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') {
-    e.respondWith(fetch(e.request));
-    return;
-  }
+  if (e.request.method !== 'GET') { e.respondWith(fetch(e.request)); return; }
   e.respondWith(
     caches.match(e.request).then(res => res || fetch(e.request).then(resp => {
       const copy = resp.clone();
@@ -19,4 +14,3 @@ self.addEventListener('fetch', (e) => {
     }).catch(()=>caches.match('./index.html')))
   );
 });
-
