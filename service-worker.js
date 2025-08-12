@@ -1,4 +1,4 @@
-const CACHE = 'control-bar-pwa-v5'; // súbelo de v1 a v3
+const CACHE = 'control-bar-pwa-v6'; // súbelo de v1 a v3
 const ASSETS = ['./','./index.html','./manifest.json','./supabaseClient.js'];
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
@@ -7,7 +7,7 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') { // no intentes cachear HEAD/POST, etc.
+  if (e.request.method !== 'GET') {
     e.respondWith(fetch(e.request));
     return;
   }
