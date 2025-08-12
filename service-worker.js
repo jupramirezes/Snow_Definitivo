@@ -1,5 +1,11 @@
-const CACHE = 'control-bar-pwa-v6';
-const ASSETS = ['./','./index.html','./manifest.json','./supabaseClient.js'];
+const CACHE = 'control-bar-pwa-v9-2025-08-12';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './config.js',
+  './supabaseClient.js'
+];
 
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); });
 self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
