@@ -6,7 +6,11 @@ self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
 });
 
-self.addEventListener('fetch', e => {
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') { // no intentes cachear HEAD/POST, etc.
+    e.respondWith(fetch(e.request));
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(res => res || fetch(e.request).then(resp => {
       const copy = resp.clone();
@@ -15,3 +19,4 @@ self.addEventListener('fetch', e => {
     }).catch(()=>caches.match('./index.html')))
   );
 });
+
