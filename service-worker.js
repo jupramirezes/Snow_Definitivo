@@ -1,4 +1,4 @@
-const CACHE = 'control-bar-pwa-v1';
+const CACHE = 'control-bar-pwa-v3'; // súbelo de v1 a v3
 const ASSETS = ['./','./index.html','./manifest.json','./supabaseClient.js'];
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
