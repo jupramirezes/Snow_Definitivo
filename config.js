@@ -1,6 +1,3 @@
-<!-- config.js -->
-<script>
-  // Reemplaza por los valores de TU proyecto Supabase nuevo
-  window.SUPABASE_URL = 'https://enqwxrihigulctictmgy.supabase.co';
-  window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucXd4cmloaWd1bGN0aWN0bWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NTY1OTAsImV4cCI6MjA3MDUzMjU5MH0.K3hJqpox7LEphK3GVCas0TNtVs2XP20IN8KlDUMuUzE';
-</script>
+window.SUPABASE_URL = 'https://enqwxrihigulctictmgy.supabase.co';
+window.SUPABASE_ANON_KEY = 'TU_ANON_KEY_AQUI';
+
