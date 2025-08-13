@@ -1,4 +1,4 @@
-// Minimal Supabase client wrapper (v2) for Control_BAR_SNOW
+// Minimal Supabase client wrapper (v2) for Control_BAR_SNOW - FASE 2
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export const supabase = createClient(
@@ -16,6 +16,68 @@ export const money = (n) =>
     maximumFractionDigits: 0,
   });
 
+// ============ PRODUCTS CRUD ============
+export async function getProducts() {
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("active", true)
+    .order("pos, name");
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addProduct({ sku, name, price, pos, vasos_per_unit = 0, type = "producto" }) {
+  const { data, error } = await supabase
+    .from("products")
+    .insert([{ sku, name, price, pos, vasos_per_unit, type, active: true }])
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProduct(id, updates) {
+  const { data, error } = await supabase
+    .from("products")
+    .update(updates)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProduct(id) {
+  // Soft delete - marcar como inactivo en lugar de borrar
+  const { error } = await supabase
+    .from("products")
+    .update({ active: false })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ============ EMPLOYEES ============
+export async function getEmployees() {
+  const { data, error } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("active", true)
+    .order("name");
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addEmployee({ name, role, daily_salary }) {
+  const { data, error } = await supabase
+    .from("employees")
+    .insert([{ name, role, daily_salary, active: true }])
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // ============ INVENTORY MOVES ============
 export async function moveInventory({
   date,
@@ -32,7 +94,7 @@ export async function moveInventory({
   if (error) throw error;
 }
 
-// (nuevo) borrar movimientos por ref_id (venta/compra) para revertir inventario
+// borrar movimientos por ref_id (venta/compra) para revertir inventario
 async function deleteMovesByRef(ref_id) {
   const { error } = await supabase
     .from("inventory_moves")
@@ -130,30 +192,9 @@ export async function addSale({
       });
   }
 
-  // shortage -> debt for manager
-  if (shortage > 0) {
-    const { data: mgr } = await supabase
-      .from("pos_managers")
-      .select("manager_name")
-      .eq("pos", pos)
-      .single();
-    const person = mgr?.manager_name || `Encargado ${pos}`;
-    await supabase
-      .from("debts")
-      .insert([
-        {
-          date,
-          person,
-          reason: `Descuadre ${pos}`,
-          amount: shortage,
-          balance: shortage,
-        },
-      ]);
-  }
   return data;
 }
 
-// (nuevo) listar ventas por fecha (para pintar tabla del día seleccionado)
 export async function listSales(date) {
   const { data, error } = await supabase
     .from("sales")
@@ -164,11 +205,8 @@ export async function listSales(date) {
   return data || [];
 }
 
-// (nuevo) borrar venta + revertir movimientos de inventario ligados a esa venta
 export async function deleteSale(id) {
-  // 1) borrar movimientos del inventario ligados a la venta
   await deleteMovesByRef(id);
-  // 2) borrar la venta
   const { error } = await supabase.from("sales").delete().eq("id", id);
   if (error) throw error;
 }
@@ -230,6 +268,24 @@ export async function addExpense({
   return data;
 }
 
+// Función especializada para nómina del día
+export async function addPayrollDay({ date, employees }) {
+  // employees: [{name, role, salary}]
+  const promises = employees.map(emp => 
+    addExpense({
+      date,
+      type: "Nomina",
+      concept: `Salario diario - ${emp.role}`,
+      amount: emp.salary,
+      attributed_to: emp.name,
+      notes: `Nómina del día ${date}`
+    })
+  );
+  
+  const results = await Promise.all(promises);
+  return results;
+}
+
 // ======== Inventory Counts (initial/final upsert) ========
 export async function upsertCounts({ date, pos, rows }) {
   // rows: [{product_id, initial_qty, final_qty}]
@@ -246,6 +302,18 @@ export async function upsertCounts({ date, pos, rows }) {
     );
     if (error) throw error;
   }
+}
+
+// Nueva función para obtener conteos existentes
+export async function getCounts(date, pos) {
+  const { data, error } = await supabase
+    .from("inventory_counts")
+    .select("*, products(sku, name)")
+    .eq("count_date", date)
+    .eq("pos", pos)
+    .order("products(name)");
+  if (error) throw error;
+  return data || [];
 }
 
 // ================ Queries for closes =====================
