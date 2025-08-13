@@ -49,10 +49,37 @@ export async function addSale({
   product_id,
   qty,
   pay_method,
+  cash_amount = 0,
+  transfer_amount = 0,
   discount_partner = 0,
   shortage = 0,
   notes = "",
 }) {
+  // Obtener precio del producto para calcular totales
+  const { data: product } = await supabase
+    .from("products")
+    .select("price, vasos_per_unit")
+    .eq("id", product_id)
+    .single();
+  
+  if (!product) throw new Error("Producto no encontrado");
+  
+  const totalVenta = product.price * qty;
+  
+  // Validar y calcular cash_amount y transfer_amount según método de pago
+  if (pay_method === "Efectivo") {
+    cash_amount = totalVenta;
+    transfer_amount = 0;
+  } else if (pay_method === "Transferencia") {
+    cash_amount = 0;
+    transfer_amount = totalVenta;
+  } else if (pay_method === "Mixto") {
+    // Para Mixto, cash_amount y transfer_amount deben venir del frontend
+    if (cash_amount + transfer_amount !== totalVenta) {
+      throw new Error(`En pago Mixto, efectivo (${cash_amount}) + transferencia (${transfer_amount}) debe sumar ${totalVenta}`);
+    }
+  }
+
   const { data, error } = await supabase
     .from("sales")
     .insert([
@@ -63,6 +90,8 @@ export async function addSale({
         product_id,
         qty,
         pay_method,
+        cash_amount,
+        transfer_amount,
         discount_partner,
         shortage,
         notes,
@@ -83,12 +112,7 @@ export async function addSale({
   });
 
   // if product uses cups, discount VASO-12
-  const { data: prod } = await supabase
-    .from("products")
-    .select("vasos_per_unit")
-    .eq("id", product_id)
-    .single();
-  if (prod && prod.vasos_per_unit > 0) {
+  if (product.vasos_per_unit > 0) {
     const { data: vaso } = await supabase
       .from("products")
       .select("id")
@@ -99,7 +123,7 @@ export async function addSale({
         date,
         pos,
         product_id: vaso.id,
-        qty: -(qty * prod.vasos_per_unit),
+        qty: -(qty * product.vasos_per_unit),
         kind: "sale",
         ref_id: data.id,
         notes: "Consumo de vasos",

@@ -1,4 +1,4 @@
-const CACHE = 'control-bar-pwa-v9-2025-08-12';
+const CACHE = 'control-bar-pwa-v10-2025-08-12';
 const ASSETS = [
   './',
   './index.html',

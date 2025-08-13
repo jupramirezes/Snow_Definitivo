@@ -22,6 +22,8 @@
     .table-sm td, .table-sm th { padding: .45rem .5rem; }
     .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #eee; padding: 8px 12px; z-index: 1000; }
     .muted-hint{font-size:12px;color:#6c757d}
+    .mixto-fields { display: none; }
+    .mixto-fields.show { display: block; }
   </style>
   <script>
     // TODO: reemplazar por variables de entorno en Vercel si quieres
@@ -69,11 +71,32 @@
       </div>
       <div class="col-4">
         <label class="form-label">Pago</label>
-        <select id="ventaPago" class="form-select form-select-lg"><option>Efectivo</option><option>Transferencia</option></select>
+        <select id="ventaPago" class="form-select form-select-lg">
+          <option>Efectivo</option>
+          <option>Transferencia</option>
+          <option>Mixto</option>
+        </select>
       </div>
       <div class="col-4">
         <label class="form-label">Notas</label>
         <input id="ventaNotas" class="form-control form-control-lg" placeholder="Mesa/promo">
+      </div>
+
+      <!-- Campos para pago Mixto -->
+      <div id="mixtoFields" class="col-12 mixto-fields">
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Efectivo ($)</label>
+            <input id="ventaEfectivo" type="number" min="0" value="0" class="form-control form-control-lg">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Transferencia ($)</label>
+            <input id="ventaTransferencia" type="number" min="0" value="0" class="form-control form-control-lg">
+          </div>
+          <div class="col-12">
+            <small class="text-muted">Total a pagar: <span id="totalAPagar">$0</span></small>
+          </div>
+        </div>
       </div>
 
       <!-- Mantengo los campos pero ocultos para que no se usen por venta -->
@@ -208,7 +231,7 @@
 </script>
   
 <script type="module">
-  import { supabase, q, money, addSale, addPurchase, addExpense, upsertCounts, fetchDayClose, fetchRangeClose, deleteSale } from './supabaseClient.js?v=3';
+  import { supabase, q, money, addSale, addPurchase, addExpense, upsertCounts, fetchDayClose, fetchRangeClose, deleteSale } from './supabaseClient.js?v=4';
 
   // ==== Fecha local consistente + getter del selector ====
   const localISODate = () => {
@@ -241,6 +264,64 @@
   }
   document.getElementById('ventaPOS').addEventListener('change', rebuildSelects);
 
+  // ============ MANEJO DE PAGO MIXTO ============
+  function updateTotalAPagar() {
+    const productId = document.getElementById('ventaProd').value;
+    const qty = +document.getElementById('ventaCant').value || 1;
+    const product = products.find(p => p.id === productId);
+    const total = product ? product.price * qty : 0;
+    document.getElementById('totalAPagar').textContent = money(total);
+    return total;
+  }
+
+  // Mostrar/ocultar campos mixto
+  document.getElementById('ventaPago').addEventListener('change', function() {
+    const payMethod = this.value;
+    const mixtoFields = document.getElementById('mixtoFields');
+    
+    if (payMethod === 'Mixto') {
+      mixtoFields.classList.add('show');
+      updateTotalAPagar();
+    } else {
+      mixtoFields.classList.remove('show');
+      document.getElementById('ventaEfectivo').value = 0;
+      document.getElementById('ventaTransferencia').value = 0;
+    }
+  });
+
+  // Actualizar total cuando cambie producto o cantidad
+  document.getElementById('ventaProd').addEventListener('change', updateTotalAPagar);
+  document.getElementById('ventaCant').addEventListener('input', updateTotalAPagar);
+
+  // Validar suma en tiempo real para pago mixto
+  function validateMixto() {
+    const efectivo = +document.getElementById('ventaEfectivo').value || 0;
+    const transferencia = +document.getElementById('ventaTransferencia').value || 0;
+    const total = updateTotalAPagar();
+    
+    const suma = efectivo + transferencia;
+    const btnAdd = document.getElementById('btnAddVenta');
+    
+    if (document.getElementById('ventaPago').value === 'Mixto') {
+      if (suma === total) {
+        btnAdd.disabled = false;
+        btnAdd.textContent = editingSale ? 'Guardar cambios' : 'Agregar venta';
+        btnAdd.className = 'btn btn-success btn-fat mt-2';
+      } else {
+        btnAdd.disabled = true;
+        btnAdd.textContent = `Falta ${money(total - suma)} (Total: ${money(total)})`;
+        btnAdd.className = 'btn btn-outline-danger btn-fat mt-2';
+      }
+    } else {
+      btnAdd.disabled = false;
+      btnAdd.textContent = editingSale ? 'Guardar cambios' : 'Agregar venta';
+      btnAdd.className = 'btn btn-success btn-fat mt-2';
+    }
+  }
+
+  document.getElementById('ventaEfectivo').addEventListener('input', validateMixto);
+  document.getElementById('ventaTransferencia').addEventListener('input', validateMixto);
+
   // Estado edición
   let editingSale = null;
 
@@ -251,31 +332,94 @@
     const qty = +document.getElementById('ventaCant').value || 1;
     const pay_method = document.getElementById('ventaPago').value;
     const notes = document.getElementById('ventaNotas').value.trim();
-    const discount_partner = 0; // ya no por venta
-    const shortage = 0;         // ya no por venta
     const date = getSelectedDate();
     const time = new Date().toTimeString().slice(0,8);
+    
+    // Obtener cash_amount y transfer_amount según método de pago
+    let cash_amount = 0;
+    let transfer_amount = 0;
+    
+    if (pay_method === 'Mixto') {
+      cash_amount = +document.getElementById('ventaEfectivo').value || 0;
+      transfer_amount = +document.getElementById('ventaTransferencia').value || 0;
+    }
+    
     try{
       if(editingSale){
         await deleteSale(editingSale.id);
-        await addSale({date,time: editingSale.time || time,pos,product_id,qty,pay_method,discount_partner,shortage,notes});
+        await addSale({
+          date,
+          time: editingSale.time || time,
+          pos,
+          product_id,
+          qty,
+          pay_method,
+          cash_amount,
+          transfer_amount,
+          discount_partner: 0,
+          shortage: 0,
+          notes
+        });
         editingSale = null;
         document.getElementById('btnAddVenta').textContent = 'Agregar venta';
         alert('Venta actualizada');
       }else{
-        await addSale({date,time,pos,product_id,qty,pay_method,discount_partner,shortage,notes});
+        await addSale({
+          date,
+          time,
+          pos,
+          product_id,
+          qty,
+          pay_method,
+          cash_amount,
+          transfer_amount,
+          discount_partner: 0,
+          shortage: 0,
+          notes
+        });
         alert('Venta registrada');
       }
+      
+      // Limpiar formulario
+      document.getElementById('ventaCant').value = 1;
+      document.getElementById('ventaNotas').value = '';
+      document.getElementById('ventaEfectivo').value = 0;
+      document.getElementById('ventaTransferencia').value = 0;
+      document.getElementById('ventaPago').value = 'Efectivo';
+      document.getElementById('mixtoFields').classList.remove('show');
+      
       await renderVentas();
-    }catch(e){ console.error(e); alert('Error guardando venta'); }
+    }catch(e){ 
+      console.error(e); 
+      alert('Error guardando venta: ' + e.message); 
+    }
   });
 
   async function renderVentas(){
     const d = getSelectedDate();
-    const { data, error } = await supabase.from('sales').select('*, products(name,price,pos)').eq('date', d).order('time');
-    const tb = document.querySelector('#tblVentas tbody'); tb.innerHTML='';
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*, products(name,price,pos)')
+      .eq('date', d)
+      .order('time');
+    
+    if (error) {
+      console.error('Error loading sales:', error);
+      return;
+    }
+    
+    const tb = document.querySelector('#tblVentas tbody'); 
+    tb.innerHTML='';
+    
     (data||[]).forEach(v=>{
-      const total = (v.products?.price||0)*v.qty;
+      const total = v.cash_amount + v.transfer_amount;
+      let pagoDisplay = v.pay_method;
+      
+      // Mostrar desglose si es mixto
+      if (v.pay_method === 'Mixto') {
+        pagoDisplay = `Mixto (E:${money(v.cash_amount)} T:${money(v.transfer_amount)})`;
+      }
+      
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${v.date}</td>
@@ -283,25 +427,42 @@
         <td><span class="pos-pill pos-${v.pos}">${v.pos}</span></td>
         <td>${v.products?.name||''}</td>
         <td>${v.qty}</td>
-        <td>${v.pay_method}</td>
+        <td>${pagoDisplay}</td>
         <td>${money(total)}</td>
         <td>
           <span class="text-primary me-2" style="cursor:pointer" data-edit='${JSON.stringify({
-            id:v.id, date:v.date, time:v.time, pos:v.pos, product_id:v.product_id, qty:v.qty, pay_method:v.pay_method, notes:v.notes||''
+            id:v.id, 
+            date:v.date, 
+            time:v.time, 
+            pos:v.pos, 
+            product_id:v.product_id, 
+            qty:v.qty, 
+            pay_method:v.pay_method, 
+            cash_amount: v.cash_amount,
+            transfer_amount: v.transfer_amount,
+            notes:v.notes||''
           }).replace(/"/g,'&quot;')}'>Editar</span>
           <span class="text-danger" style="cursor:pointer" data-del="${v.id}">Borrar</span>
         </td>`;
       tb.appendChild(tr);
     });
 
-    // Borrar
+    // Borrar (CON BUG FIX - actualiza inmediatamente la UI)
     tb.querySelectorAll('[data-del]').forEach(el=>{
       el.onclick = async () => {
         if(!confirm('¿Borrar venta? Esto revierte el inventario.')) return;
-        try { await deleteSale(el.dataset.del); await renderVentas(); }
-        catch(e){ console.error(e); alert('Error borrando'); }
+        try { 
+          await deleteSale(el.dataset.del); 
+          // BUG FIX: Actualizar inmediatamente la UI
+          await renderVentas(); 
+        }
+        catch(e){ 
+          console.error(e); 
+          alert('Error borrando: ' + e.message); 
+        }
       };
     });
+    
     // Editar
     tb.querySelectorAll('[data-edit]').forEach(el=>{
       el.onclick = () => {
@@ -314,6 +475,16 @@
         document.getElementById('ventaPago').value = v.pay_method;
         document.getElementById('ventaNotas').value = v.notes || '';
         document.getElementById('appDate').value = v.date;
+        
+        // Configurar campos mixto si es necesario
+        if (v.pay_method === 'Mixto') {
+          document.getElementById('mixtoFields').classList.add('show');
+          document.getElementById('ventaEfectivo').value = v.cash_amount || 0;
+          document.getElementById('ventaTransferencia').value = v.transfer_amount || 0;
+        } else {
+          document.getElementById('mixtoFields').classList.remove('show');
+        }
+        
         document.getElementById('btnAddVenta').textContent = 'Guardar cambios';
         goto('mesero');
       };
@@ -384,10 +555,9 @@
     const f = document.getElementById('fechaDia').value || getSelectedDate();
     const { sales, expenses } = await fetchDayClose(f);
     const porPOS = (pos) => (sales||[]).filter(x=>x.pos===pos).reduce((acc,cur)=>{
-      const price = cur.products?.price||0;
-      const neto = price*cur.qty;
-      acc.total += neto; 
-      if(cur.pay_method==='Efectivo') acc.ef += neto; else acc.tr += neto;
+      acc.total += (cur.cash_amount + cur.transfer_amount); 
+      acc.ef += cur.cash_amount;
+      acc.tr += cur.transfer_amount;
       return acc;
     }, {total:0, ef:0, tr:0});
     const barra = porPOS('Barra'); const grz = porPOS('Granizados');
@@ -442,9 +612,9 @@
 
     let total=0, ef=0, tr=0;
     (sales||[]).forEach(s=>{
-      const price = s.products?.price||0;
-      const neto = price*s.qty;
-      total += neto; if(s.pay_method==='Efectivo') ef+=neto; else tr+=neto;
+      total += (s.cash_amount + s.transfer_amount);
+      ef += s.cash_amount;
+      tr += s.transfer_amount;
     });
 
     let gto=0, nom=0, dss=0; const expBySoc = {};
