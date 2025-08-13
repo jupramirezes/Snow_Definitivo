@@ -26,6 +26,137 @@
     .mixto-fields.show { display: block; }
     .admin-section { border-left: 4px solid #ffc107; background: #fffbf0; }
     .editable-count { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 4px 8px; min-width: 60px; text-align: center; }
+    
+    /* ===== ESTILOS PARA CIERRES AVANZADOS ===== */
+    .nav-cierres {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .nav-cierre-btn {
+      background: white;
+      border: 2px solid #dee2e6;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .nav-cierre-btn:hover {
+      border-color: #0d6efd;
+      background: #e7f1ff;
+    }
+
+    .nav-cierre-btn.active {
+      background: #0d6efd;
+      color: white;
+      border-color: #0d6efd;
+    }
+
+    .cierre-container {
+      display: none;
+    }
+
+    .cierre-container.active {
+      display: block;
+    }
+
+    .inferencia-exitosa {
+      background: #d1edff;
+      border: 1px solid #0d6efd;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+
+    .descuadres-exitoso {
+      background: #d4edda;
+      border: 1px solid #28a745;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+
+    .deudor-card {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+      background: #f8f9fa;
+    }
+
+    .metrica-card {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border-left: 4px solid #0d6efd;
+      background: #f8f9fa;
+    }
+
+    .btn-inferir {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-inferir:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-inferir:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .gastos-extra-form {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+
+    .tabla-reparto-detalle {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .tabla-reparto-detalle th,
+    .tabla-reparto-detalle td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .tabla-reparto-detalle th {
+      background: #f8f9fa;
+      font-weight: bold;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    @media (max-width: 768px) {
+      .nav-cierres {
+        flex-direction: column;
+      }
+    }
   </style>
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || "{{SUPABASE_URL}}";
@@ -234,35 +365,127 @@
     </div>
   </section>
 
-  <!-- Socios -->
+  <!-- Socios - VERSIÓN ACTUALIZADA CON NAVEGACIÓN DE CIERRES AVANZADOS -->
   <section id="socios" class="tile mt-3" hidden>
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="m-0">Cierres + Reparto</h5>
       <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
     </div>
-    <div class="row g-2 mt-2">
-      <div class="col-12 tile">
-        <h6>Cierre diario</h6>
-        <div class="d-flex flex-wrap gap-2">
-          <input type="date" id="fechaDia" class="form-control" style="max-width:200px">
-          <button id="btnCierreDia" class="btn btn-dark">Generar</button>
-          <div class="vr"></div>
-          <input type="number" id="efContadoBarra" class="form-control" placeholder="Efectivo contado Barra" style="max-width:220px">
-          <input type="number" id="efContadoGrz" class="form-control" placeholder="Efectivo contado Granizados" style="max-width:260px">
-          <button id="btnRegDescuadres" class="btn btn-outline-danger">Registrar descuadres como deudas</button>
+    
+    <!-- Navegación de cierres -->
+    <div class="nav-cierres mt-3">
+      <button onclick="mostrarCierre('diario')" class="nav-cierre-btn active">
+        📊 Cierre Diario
+      </button>
+      <button onclick="mostrarCierre('semanal')" class="nav-cierre-btn">
+        📈 Cierre Semanal
+      </button>
+      <button onclick="mostrarCierre('administracion')" class="nav-cierre-btn">
+        🛠️ Administración Avanzada
+      </button>
+    </div>
+    
+    <!-- Contenedor Cierre Diario -->
+    <div id="cierre-diario-container" class="cierre-container active">
+      <div class="row g-2 mt-2">
+        <div class="col-12 tile">
+          <h6>🔮 Inferir Ventas en Efectivo</h6>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <button onclick="ejecutarInferencia('Barra')" class="btn-inferir">
+              ⚡ Inferir Barra
+            </button>
+            <button onclick="ejecutarInferencia('Granizados')" class="btn-inferir">
+              ⚡ Inferir Granizados
+            </button>
+          </div>
+          <div id="resultado-inferencia"></div>
         </div>
-        <div id="cierreDia" class="mt-3"></div>
+        
+        <div class="col-12 tile">
+          <h6>💰 Cierre Diario</h6>
+          <div class="d-flex flex-wrap gap-2">
+            <input type="date" id="fechaDia" class="form-control" style="max-width:200px">
+            <button id="btnCierreDia" class="btn btn-dark">Generar</button>
+            <div class="vr"></div>
+            <input type="number" id="efContadoBarra" class="form-control" placeholder="Efectivo contado Barra" style="max-width:220px">
+            <input type="number" id="efContadoGrz" class="form-control" placeholder="Efectivo contado Granizados" style="max-width:260px">
+            <button onclick="calcularYRegistrarDescuadres()" class="btn btn-outline-danger">Calcular Descuadres</button>
+          </div>
+          <div id="cierreDia" class="mt-3"></div>
+          <div id="resultado-descuadres" class="mt-2"></div>
+        </div>
       </div>
-      <div class="col-12 tile mt-3">
-        <h6>Cierre semanal + reparto</h6>
-        <div class="d-flex gap-2">
-          <input type="date" id="semDesde" class="form-control" style="max-width:200px">
-          <input type="date" id="semHasta" class="form-control" style="max-width:200px">
-          <button id="btnCierreSem" class="btn btn-dark">Generar</button>
+    </div>
+    
+    <!-- Contenedor Cierre Semanal -->
+    <div id="cierre-semanal-container" class="cierre-container">
+      <div class="row g-2 mt-2">
+        <div class="col-12 tile">
+          <h6>📈 Cierre Semanal + Reparto</h6>
+          <div class="d-flex gap-2 mb-3">
+            <input type="date" id="semDesde" class="form-control" style="max-width:200px">
+            <input type="date" id="semHasta" class="form-control" style="max-width:200px">
+            <button onclick="recalcularCierreSemanal()" class="btn btn-dark">Generar</button>
+          </div>
+          
+          <!-- Gastos Semanales Extra -->
+          <div class="gastos-extra-form">
+            <h6>💸 Gastos Semanales Extra</h6>
+            <div class="row g-2">
+              <div class="col-md-4">
+                <input type="text" id="concepto-extra" class="form-control form-control-sm" placeholder="Concepto (cemento, pintura...)">
+              </div>
+              <div class="col-md-3">
+                <input type="number" id="monto-extra" class="form-control form-control-sm" placeholder="Monto" min="0">
+              </div>
+              <div class="col-md-3">
+                <input type="text" id="atribuido-extra" class="form-control form-control-sm" placeholder="Atribuido a (opcional)">
+              </div>
+              <div class="col-md-2">
+                <button onclick="agregarGastoExtra()" class="btn btn-primary btn-sm w-100">➕ Agregar</button>
+              </div>
+            </div>
+            <div id="lista-gastos-extra" class="mt-2"></div>
+          </div>
+          
+          <div class="row g-2">
+            <div class="col-12 col-lg-6">
+              <div id="metricas-periodo" class="loading">Selecciona un período para ver métricas</div>
+            </div>
+            <div class="col-12 col-lg-6">
+              <div id="tabla-reparto" class="loading">El reparto se mostrará después de calcular métricas</div>
+            </div>
+          </div>
         </div>
-        <div class="row g-2 mt-2">
-          <div class="col-12 col-lg-6"><div id="cierreSemResumen"></div></div>
-          <div class="col-12 col-lg-6"><div id="cierreReparto"></div></div>
+      </div>
+    </div>
+    
+    <!-- Contenedor Administración -->
+    <div id="administracion-container" class="cierre-container">
+      <div class="tile mt-2">
+        <h6>🛠️ Administración Avanzada</h6>
+        <div class="row g-3">
+          <div class="col-12 col-lg-6">
+            <h6>💸 Deudores</h6>
+            <div id="lista-deudores-admin" class="mt-2">
+              <button onclick="cargarDeudoresAdmin()" class="btn btn-outline-primary">Cargar Deudores</button>
+            </div>
+          </div>
+          <div class="col-12 col-lg-6">
+            <h6>📊 Reportes</h6>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="date" id="fecha-inicio-reporte" class="form-control form-control-sm">
+              </div>
+              <div class="col-6">
+                <input type="date" id="fecha-fin-reporte" class="form-control form-control-sm">
+              </div>
+              <div class="col-12">
+                <button onclick="generarReporte()" class="btn btn-info btn-sm w-100">📈 Generar Reporte</button>
+              </div>
+            </div>
+            <div id="resultados-reporte" class="mt-2"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -277,6 +500,10 @@
 </div>
 
 <div id="health" style="position:fixed;right:8px;bottom:8px;font:12px system-ui;background:#111;color:#fff;padding:6px 10px;border-radius:8px;opacity:.9;z-index:9999">Cargando…</div>
+
+<!-- CARGAR SISTEMA DE CIERRES AVANZADOS -->
+<script src="cierre-avanzado.js"></script>
+
 <script type="module">
   import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
   const ok = (t)=>{ const el=document.getElementById('health'); el.textContent=t; el.style.background='#198754'; };
@@ -315,6 +542,45 @@
   document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>goto(b.dataset.goto));
   goto('home');
 
+  // ===== INTEGRACIÓN CON CIERRES AVANZADOS =====
+
+  // Funciones de navegación entre cierres
+  window.mostrarCierre = function(tipo) {
+    // Ocultar todos los contenedores
+    document.querySelectorAll('.cierre-container').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.nav-cierre-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // Mostrar contenedor seleccionado
+    document.getElementById(`${tipo}-container`).classList.add('active');
+    document.querySelector(`[onclick="mostrarCierre('${tipo}')"]`).classList.add('active');
+    
+    // Inicializar datos específicos
+    setTimeout(() => {
+      switch(tipo) {
+        case 'diario':
+          if (typeof actualizarEfectivoEsperado === 'function') {
+            actualizarEfectivoEsperado();
+          }
+          break;
+        case 'semanal':
+          if (typeof inicializarCierreSemanal === 'function') {
+            inicializarCierreSemanal();
+          }
+          break;
+        case 'administracion':
+          if (typeof inicializarVistaAdministracion === 'function') {
+            inicializarVistaAdministracion();
+          }
+          break;
+      }
+    }, 100);
+  };
+
+  // Funciones globales necesarias para el sistema avanzado
+  window.supabase = supabase;
+  window.money = money;
+  window.getSelectedDate = getSelectedDate;
+
   // ============ PRODUCTOS ============
   let products = [];
   let employees = [];
@@ -322,6 +588,7 @@
   async function loadProducts(){
     try {
       products = await getProducts();
+      window.products = products; // Hacer disponible globalmente
       rebuildSelects();
       renderProductsTable();
     } catch(e) {
@@ -418,6 +685,7 @@
   async function loadEmployees(){
     try {
       employees = await getEmployees();
+      window.employees = employees; // Hacer disponible globalmente
       renderEmployeesTable();
     } catch(e) {
       console.error('Error loading employees:', e);
@@ -848,7 +1116,7 @@
     try{ await addExpense({date,type,concept,amount,attributed_to,notes}); alert('Gasto registrado'); }catch(e){ alert('Error guardando gasto'); }
   });
 
-  // ===== Cierres =====
+  // ===== Cierres Básicos (mantener funcionalidad original) =====
   let cacheCierreDia = null;
   document.getElementById('btnCierreDia').addEventListener('click', async()=>{
     const f = document.getElementById('fechaDia').value || getSelectedDate();
@@ -872,89 +1140,6 @@
       <div class="row g-2">
         <div class="col-12 col-lg-6"><div class="tile"><h6>Barra</h6><div>Total: <b>${money(barra.total)}</b></div><div>Efectivo esperado: <b>${money(efBarraEsp)}</b> · Transf: ${money(barra.tr)}</div></div></div>
         <div class="col-12 col-lg-6"><div class="tile"><h6>Granizados</h6><div>Total: <b>${money(grz.total)}</b></div><div>Efectivo esperado: <b>${money(efGrzEsp)}</b> · Transf: ${money(grz.tr)}</div></div></div>
-      </div>
-      <div class="mt-2 d-flex flex-wrap gap-2 align-items-end">
-        <div><label class="form-label">Efectivo contado Barra</label><input type="number" id="efContadoBarra" class="form-control" style="max-width:220px"></div>
-        <div><label class="form-label">Efectivo contado Granizados</label><input type="number" id="efContadoGrz" class="form-control" style="max-width:260px"></div>
-        <button id="btnRegDescuadres" class="btn btn-outline-danger">Registrar descuadres como deudas</button>
-      </div>`;
-  });
-
-  // Registrar descuadres como deudas
-  document.addEventListener('click', async (e)=>{
-    if(e.target && e.target.id==='btnRegDescuadres'){
-      if(!cacheCierreDia) return alert('Genera el cierre diario primero.');
-      const contBarra = +document.getElementById('efContadoBarra').value||0;
-      const contGrz = +document.getElementById('efContadoGrz').value||0;
-      const diffBarra = Math.max(0, cacheCierreDia.efBarraEsp - contBarra);
-      const diffGrz = Math.max(0, cacheCierreDia.efGrzEsp - contGrz);
-      if(diffBarra===0 && diffGrz===0) return alert('Sin descuadres.');
-
-      const { data: mgrs } = await supabase.from('pos_managers').select('*');
-      const encBarra = (mgrs||[]).find(m=>m.pos==='Barra')?.manager_name || 'Encargado Barra';
-      const encGrz = (mgrs||[]).find(m=>m.pos==='Granizados')?.manager_name || 'Encargado Granizados';
-
-      const rows = [];
-      if(diffBarra>0) rows.push({date: cacheCierreDia.fecha, person: encBarra, reason:`Descuadre Barra`, amount: diffBarra, balance: diffBarra});
-      if(diffGrz>0) rows.push({date: cacheCierreDia.fecha, person: encGrz, reason:`Descuadre Granizados`, amount: diffGrz, balance: diffGrz});
-
-      const { error } = await supabase.from('debts').insert(rows);
-      if(error){ console.error(error); return alert('Error registrando deudas'); }
-      alert('Descuadres registrados.');
-    }
-  });
-
-  document.getElementById('btnCierreSem').addEventListener('click', async()=>{
-    const d = document.getElementById('semDesde').value, h = document.getElementById('semHasta').value;
-    if(!d || !h) return alert('Selecciona fechas');
-    const { sales, expenses, counts, managers, partners } = await fetchRangeClose(d,h);
-
-    let total=0, ef=0, tr=0;
-    (sales||[]).forEach(s=>{
-      total += (s.cash_amount + s.transfer_amount);
-      ef += s.cash_amount;
-      tr += s.transfer_amount;
-    });
-
-    let gto=0, nom=0, dss=0; const expBySoc = {};
-    (expenses||[]).forEach(e=>{
-      if(e.type==='Gasto') gto+=e.amount; else if(e.type==='Nomina') nom+=e.amount; else if(e.type==='DescuentoSocio') dss+=e.amount;
-      if(e.attributed_to){ expBySoc[e.attributed_to] = (expBySoc[e.attributed_to]||0) + e.amount; }
-    });
-
-    const utilidad = total - (gto+nom+dss);
-
-    const repRows = (partners||[]).map(p=>{
-      const base = utilidad * (Number(p.participation_pct||0)/100);
-      const ajustes = -(expBySoc[p.name]||0);
-      const final = base + ajustes;
-      return { name:p.name, pct: p.participation_pct, base, ajustes, final };
-    });
-
-    const { data: debts } = await supabase.from('debts').select('*').gte('date', d).lte('date', h);
-    const desBarra = (debts||[]).filter(x=>/Barra/.test(x.reason)).reduce((a,b)=>a+b.amount,0);
-    const desGrz = (debts||[]).filter(x=>/Granizados/.test(x.reason)).reduce((a,b)=>a+b.amount,0);
-
-    document.getElementById('cierreSemResumen').innerHTML = `
-      <div class="tile">
-        <div>${d} a ${h}</div>
-        <div class="mt-1">Ventas: <b>${money(total)}</b> · Efectivo: ${money(ef)} · Transf: ${money(tr)}</div>
-        <div>Gastos: ${money(gto)} · Nómina: ${money(nom)} · Desc. Socios: ${money(dss)}</div>
-        <div class="mt-1">Utilidad neta: <b>${money(utilidad)}</b></div>
-        <div class="mt-1"><b>Deudas por descuadre</b> · Barra: ${money(desBarra)} · Granizados: ${money(desGrz)}</div>
-      </div>`;
-
-    document.getElementById('cierreReparto').innerHTML = `
-      <div class="tile">
-        <h6>Reparto por socio</h6>
-        <div class="table-responsive">
-          <table class="table table-sm">
-            <thead><tr><th>Socio</th><th>%</th><th>Base</th><th>Ajustes</th><th>Total</th></tr></thead>
-            <tbody>
-              ${repRows.map(r=>`<tr><td>${r.name}</td><td>${r.pct}%</td><td>${money(r.base)}</td><td>${money(r.ajustes)}</td><td><b>${money(r.final)}</b></td></tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
       </div>`;
   });
 
