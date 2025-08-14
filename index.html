@@ -11,7 +11,7 @@
   <!-- Librerías para exportación -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="./export-utils.js"></script>
+  <script src="./export-utils.js?v=7"></script>
   <style>
     :root { --pad: 14px; }
     body { background:#f7f7f8; }
@@ -605,7 +605,7 @@
 <div id="health" style="position:fixed;right:8px;bottom:8px;font:12px system-ui;background:#111;color:#fff;padding:6px 10px;border-radius:8px;opacity:.9;z-index:9999">Cargando…</div>
 
 <!-- CARGAR SISTEMA DE CIERRES AVANZADOS -->
-<script src="cierre-avanzado.js"></script>
+<script src="cierre-avanzado.js?v=7"></script>
 
 <script type="module">
   import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -629,7 +629,7 @@
     upsertCounts, getCounts,
     fetchDayClose, fetchRangeClose, deleteSale,
     logActivity, validateSaleData, resetAllData, getDashboardData
-  } from './supabaseClient.js?v=6';
+  } from './supabaseClient.js?v=7';
 
   // ==== Fecha local consistente + getter del selector ====
   const localISODate = () => {
