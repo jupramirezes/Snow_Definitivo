@@ -660,4 +660,43 @@ export async function getDashboardData(date) {
   return { sales: sales || [], expenses: expenses || [], purchases: purchases || [], counts: counts || [], recentLog: recentLog || [] };
 }
 
+// ============ DELETE FUNCTIONS ============
+export async function deletePurchase(id) {
+  // Primero eliminar los inventory moves relacionados
+  const { error: movesError } = await supabase
+    .from("inventory_moves")
+    .delete()
+    .eq("ref_id", id);
+  if (movesError) throw movesError;
+
+  // Luego eliminar la compra
+  const { error } = await supabase
+    .from("purchases")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+
+  await logActivity({
+    action: 'DELETE_PURCHASE',
+    table_name: 'purchases',
+    record_id: id,
+    details: {}
+  });
+}
+
+export async function deleteExpense(id) {
+  const { error } = await supabase
+    .from("expenses")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+
+  await logActivity({
+    action: 'DELETE_EXPENSE',
+    table_name: 'expenses',
+    record_id: id,
+    details: {}
+  });
+}
+
 // ============ UPDATE EXISTING FUNCTIONS WITH LOGGING ============

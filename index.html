@@ -372,7 +372,12 @@
             <div class="col-4"><select id="gastoTipo" class="form-select"><option value="Gasto">Gasto</option><option value="Nomina">Nómina</option><option value="DescuentoSocio">DescuentoSocio</option></select></div>
             <div class="col-4"><input id="gastoConcepto" class="form-control" placeholder="Concepto"/></div>
             <div class="col-4"><input id="gastoValor" type="number" min="0" class="form-control" placeholder="Valor"/></div>
-            <div class="col-6"><input id="gastoAtrib" class="form-control" placeholder="Socio/Persona"/></div>
+            <div class="col-6">
+              <input id="gastoAtrib" class="form-control" placeholder="Socio/Persona"/>
+              <select id="gastoSocioSelect" class="form-select" style="display:none">
+                <option value="">Seleccionar socio...</option>
+              </select>
+            </div>
             <div class="col-6"><input id="gastoNotas" class="form-control" placeholder="Notas"/></div>
             <div class="col-12 d-grid"><button id="btnAddGasto" class="btn btn-warning">Agregar gasto</button></div>
           </div>
@@ -648,7 +653,7 @@
     getPartners, addPartner, updatePartner, deletePartner,
     addSale, addPurchase, addExpense, addPayrollDay,
     upsertCounts, getCounts,
-    fetchDayClose, fetchRangeClose, deleteSale,
+    fetchDayClose, fetchRangeClose, deleteSale, deletePurchase, deleteExpense,
     logActivity, validateSaleData, resetAllData, getDashboardData
   } from './supabaseClient.js?v=7';
 
@@ -1315,12 +1320,38 @@
     }catch(e){ console.error(e); alert('Error guardando compra'); }
   });
 
+  // Manejar cambio de tipo de gasto
+  document.getElementById('gastoTipo').addEventListener('change', function() {
+    const tipo = this.value;
+    const inputAtrib = document.getElementById('gastoAtrib');
+    const selectSocio = document.getElementById('gastoSocioSelect');
+    
+    if (tipo === 'DescuentoSocio') {
+      inputAtrib.style.display = 'none';
+      selectSocio.style.display = 'block';
+    } else {
+      inputAtrib.style.display = 'block';
+      selectSocio.style.display = 'none';
+    }
+  });
+
   // Expenses
   document.getElementById('btnAddGasto').addEventListener('click', async()=>{
     const type = document.getElementById('gastoTipo').value;
     const concept = document.getElementById('gastoConcepto').value.trim();
     const amount = +document.getElementById('gastoValor').value||0;
-    const attributed_to = document.getElementById('gastoAtrib').value.trim();
+    
+    // Obtener attributed_to dependiendo del tipo
+    let attributed_to = '';
+    if (type === 'DescuentoSocio') {
+      attributed_to = document.getElementById('gastoSocioSelect').value;
+      if (!attributed_to) {
+        return alert('Debe seleccionar un socio para el descuento');
+      }
+    } else {
+      attributed_to = document.getElementById('gastoAtrib').value.trim();
+    }
+    
     const notes = document.getElementById('gastoNotas').value.trim();
     const date = getSelectedDate();
     try{ 
@@ -1330,6 +1361,7 @@
       document.getElementById('gastoConcepto').value = '';
       document.getElementById('gastoValor').value = '';
       document.getElementById('gastoAtrib').value = '';
+      document.getElementById('gastoSocioSelect').value = '';
       document.getElementById('gastoNotas').value = '';
       await updateDashboard(); // ACTUALIZAR INTERFAZ
     }catch(e){ alert('Error guardando gasto'); }
@@ -1425,8 +1457,17 @@
       // Renderizar compras del día
       const comprasHTML = data.purchases.map(p => `
         <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-          <div><strong>${p.products?.name}</strong> x${p.qty}</div>
-          <div>${money(p.qty * p.unit_cost)}</div>
+          <div>
+            <strong>${p.products?.name || 'Producto'}</strong> x${p.qty}
+            <br><small class="text-muted">${p.notes || ''}</small>
+          </div>
+          <div class="text-end">
+            <div>${money(p.qty * p.unit_cost)}</div>
+            <div class="small">
+              <span class="text-primary" style="cursor:pointer" onclick="editPurchase('${p.id}')">Editar</span> |
+              <span class="text-danger" style="cursor:pointer" onclick="deletePurchase('${p.id}')">Borrar</span>
+            </div>
+          </div>
         </div>
       `).join('');
       
@@ -1437,8 +1478,17 @@
       // Renderizar gastos del día
       const gastosHTML = data.expenses.map(e => `
         <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-          <div><strong>${e.concept}</strong> (${e.type})<br><small class="text-muted">${e.attributed_to || ''}</small></div>
-          <div>${money(e.amount)}</div>
+          <div>
+            <strong>${e.concept}</strong> (${e.type})
+            <br><small class="text-muted">${e.attributed_to || ''}</small>
+          </div>
+          <div class="text-end">
+            <div>${money(e.amount)}</div>
+            <div class="small">
+              <span class="text-primary" style="cursor:pointer" onclick="editExpense('${e.id}')">Editar</span> |
+              <span class="text-danger" style="cursor:pointer" onclick="deleteExpense('${e.id}')">Borrar</span>
+            </div>
+          </div>
         </div>
       `).join('');
       
@@ -1456,9 +1506,23 @@
     try {
       partners = await getPartners();
       renderPartnersTable();
+      updateGastoSociosSelect(); // Actualizar select de gastos
     } catch(e) {
       console.error('Error loading partners:', e);
     }
+  }
+
+  function updateGastoSociosSelect() {
+    const select = document.getElementById('gastoSocioSelect');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">Seleccionar socio...</option>';
+    partners.forEach(partner => {
+      const option = document.createElement('option');
+      option.value = partner.name;
+      option.textContent = partner.name;
+      select.appendChild(option);
+    });
   }
 
   function renderPartnersTable() {
@@ -1603,12 +1667,60 @@
     return JSON.parse(localStorage.getItem('encargados') || '{}');
   };
 
+  // ============ FUNCIONES GLOBALES PARA EDITAR/BORRAR ============
+  window.editPurchase = function(id) {
+    alert('🚧 Función en desarrollo. Por ahora solo se pueden borrar compras.');
+  };
+
+  window.deletePurchase = async function(id) {
+    if (!confirm('¿Eliminar esta compra? Esto revertirá los cambios en el inventario.')) return;
+    
+    try {
+      await deletePurchase(id);
+      alert('✅ Compra eliminada exitosamente');
+      await updateDashboard();
+    } catch (e) {
+      alert('❌ Error eliminando compra: ' + e.message);
+    }
+  };
+
+  window.editExpense = function(id) {
+    alert('🚧 Función en desarrollo. Por ahora solo se pueden borrar gastos.');
+  };
+
+  window.deleteExpense = async function(id) {
+    if (!confirm('¿Eliminar este gasto?')) return;
+    
+    try {
+      await deleteExpense(id);
+      alert('✅ Gasto eliminado exitosamente');
+      await updateDashboard();
+    } catch (e) {
+      alert('❌ Error eliminando gasto: ' + e.message);
+    }
+  };
+
   // ============ FUNCIONES GLOBALES DE UTILIDAD ============
   window.resetAllDataConfirm = async function() {
+    alert(`🗑️ CÓMO BORRAR TODO SIEMPRE:
+
+1. Usa el botón "🗑️ Reset BD" (borra solo datos operativos)
+2. O en Supabase SQL Editor ejecuta:
+   DELETE FROM sales;
+   DELETE FROM purchases; 
+   DELETE FROM expenses;
+   DELETE FROM inventory_counts;
+   DELETE FROM inventory_moves;
+   DELETE FROM activity_log;
+
+3. En la app: Refresca (F5)
+
+✅ Se mantienen: productos, empleados, socios, encargados`);
+
     const confirmed = confirm(
-      '⚠️ ADVERTENCIA: Esto borrará TODOS los datos de ventas, compras, gastos e inventario.\n\n' +
+      '⚠️ ADVERTENCIA: Esto borrará TODOS los datos operativos.\n\n' +
       'Solo se mantendrán productos, empleados y socios.\n\n' +
-      '¿Estás seguro? Esta acción NO se puede deshacer.'
+      '¿Continuar?'
     );
     
     if (confirmed) {
@@ -1616,7 +1728,13 @@
       if (doubleConfirm === 'BORRAR TODO') {
         try {
           await resetAllData();
-          alert('✅ Todos los datos han sido eliminados exitosamente.');
+          // Limpiar también localStorage
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('inventory_') || key.startsWith('cache_')) {
+              localStorage.removeItem(key);
+            }
+          });
+          alert('✅ Todos los datos operativos eliminados exitosamente.');
           location.reload();
         } catch (e) {
           alert('❌ Error al eliminar datos: ' + e.message);
