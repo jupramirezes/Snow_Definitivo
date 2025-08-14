@@ -730,22 +730,13 @@
     document.getElementById('compraProd').innerHTML = products.map(p=>`<option value="${p.id}">${p.name} (${p.sku})</option>`).join('');
   }
 
-  async function renderProductsTable() {
+  function renderProductsTable() {
     const tbody = document.querySelector('#tblProducts tbody');
+    if (!tbody) return;
+    
     tbody.innerHTML = '';
     
-    for (const p of products) {
-      // Calcular stock actual básico (esto es una aproximación)
-      const date = getSelectedDate();
-      const { data: counts } = await supabase
-        .from('inventory_counts')
-        .select('final_qty')
-        .eq('count_date', date)
-        .eq('product_id', p.id)
-        .single();
-      
-      const stock = counts?.final_qty || 'N/A';
-      
+    products.forEach(p => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${p.sku}</td>
@@ -753,13 +744,15 @@
         <td>${money(p.price)}</td>
         <td><span class="pos-pill pos-${p.pos}">${p.pos}</span></td>
         <td>${p.vasos_per_unit || 0}</td>
-        <td><span class="badge ${stock === 'N/A' ? 'bg-secondary' : stock > 10 ? 'bg-success' : stock > 0 ? 'bg-warning' : 'bg-danger'}">${stock}</span></td>
+        <td><span class="badge bg-info">Ver stock</span></td>
         <td>
           <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${p.id}')">Editar</button>
           <button class="btn btn-sm btn-outline-danger" onclick="removeProduct('${p.id}')">Borrar</button>
         </td>`;
       tbody.appendChild(tr);
-    }
+    });
+    
+    console.log(`Products rendered: ${products.length}`);
   }
 
   // Agregar producto
@@ -834,6 +827,8 @@
 
   function renderEmployeesTable() {
     const tbody = document.querySelector('#tblEmployees tbody');
+    if (!tbody) return;
+    
     tbody.innerHTML = '';
     employees.forEach(e => {
       const tr = document.createElement('tr');
@@ -844,6 +839,8 @@
         <td><span class="badge bg-${e.active ? 'success' : 'secondary'}">${e.active ? 'Activo' : 'Inactivo'}</span></td>`;
       tbody.appendChild(tr);
     });
+    
+    console.log(`Employees rendered: ${employees.length}`);
   }
 
   // Agregar empleado
@@ -1136,13 +1133,21 @@
     const date = getSelectedDate();
     
     try {
-      // Obtener conteos existentes
+      // Intentar cargar desde caché primero
+      const cacheKey = `inventory_${pos}_${date}`;
+      const cachedData = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+      
+      // Obtener conteos de Supabase
       const existingCounts = await getCounts(date, pos);
       
       // Obtener productos del POS
       const posProducts = products.filter(p => p.pos === pos && p.type === 'producto');
       
       let html = `
+        <div class="alert alert-info">
+          <strong>Inventario ${pos} - ${date}</strong>
+          <div class="small">💡 Tip: Los datos se guardan automáticamente y persisten al refrescar</div>
+        </div>
         <div class="table-responsive">
           <table class="table table-sm">
             <thead>
@@ -1151,9 +1156,12 @@
             <tbody>`;
       
       posProducts.forEach(product => {
+        // Prioridad: caché > supabase > 0
+        const cached = cachedData[product.id];
         const existing = existingCounts.find(c => c.product_id === product.id);
-        const initial = existing?.initial_qty || 0;
-        const final = existing?.final_qty || 0;
+        
+        const initial = cached?.initial_qty ?? existing?.initial_qty ?? 0;
+        const final = cached?.final_qty ?? existing?.final_qty ?? 0;
         
         html += `
           <tr>
@@ -1167,9 +1175,11 @@
       html += `</tbody></table></div>`;
       document.getElementById('inventarioContainer').innerHTML = html;
       
+      console.log(`Inventario cargado para ${pos}: ${posProducts.length} productos`);
+      
     } catch(e) {
       console.error('Error cargando inventario:', e);
-      alert('Error cargando inventario');
+      alert('Error cargando inventario: ' + e.message);
     }
   }
 
@@ -1198,10 +1208,24 @@
     
     try {
       await upsertCounts({ date, pos, rows });
-      alert('Inventario guardado');
+      alert('✅ Inventario guardado exitosamente');
+      
+      // Guardar también en localStorage para persistencia
+      const cacheKey = `inventory_${pos}_${date}`;
+      const cacheData = {};
+      rows.forEach(row => {
+        cacheData[row.product_id] = {
+          initial_qty: row.initial_qty,
+          final_qty: row.final_qty
+        };
+      });
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      
+      console.log('Inventario guardado y cacheado para', pos, date);
+      await updateDashboard();
     } catch(e) {
       console.error('Error guardando inventario:', e);
-      alert('Error guardando inventario');
+      alert('❌ Error guardando inventario: ' + e.message);
     }
   });
 
@@ -1443,18 +1467,22 @@
     
     const totalShare = partners.reduce((sum, p) => sum + parseFloat(p.share_pct), 0);
     
-    let html = partners.map(partner => `
-      <div class="partner-item">
-        <div class="flex-grow-1">
-          <strong>${partner.name}</strong>
-          <div class="small text-muted">${partner.share_pct}% de participación</div>
+    let html = '';
+    
+    partners.forEach(partner => {
+      html += `
+        <div class="partner-item">
+          <div class="flex-grow-1">
+            <strong>${partner.name}</strong>
+            <div class="small text-muted">${partner.share_pct}% de participación</div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" onclick="editPartner('${partner.id}')">Editar</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deletePartnerConfirm('${partner.id}')">Eliminar</button>
+          </div>
         </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-sm btn-outline-primary" onclick="editPartner('${partner.id}')">Editar</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="deletePartnerConfirm('${partner.id}')">Eliminar</button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    });
     
     html += `
       <div class="mt-2 p-2 ${totalShare === 100 ? 'bg-success' : 'bg-warning'} text-white rounded">
@@ -1464,6 +1492,7 @@
     `;
     
     container.innerHTML = html;
+    console.log(`Partners rendered: ${partners.length}, Total: ${totalShare.toFixed(1)}%`);
   }
 
   // Funciones globales para socios
