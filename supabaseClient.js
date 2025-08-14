@@ -496,14 +496,20 @@ export async function fetchRangeClose(desde, hasta) {
 
 // ============ ACTIVITY LOG ============
 export async function logActivity({ action, table_name, record_id, details }) {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10);
-  const time = now.toTimeString().slice(0, 8);
-  
-  const { error } = await supabase
-    .from("activity_log")
-    .insert([{ date, time, action, table_name, record_id, details }]);
-  if (error) console.error('Error logging activity:', error);
+  try {
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10);
+    const time = now.toTimeString().slice(0, 8);
+    
+    const { error } = await supabase
+      .from("activity_log")
+      .insert([{ date, time, action, table_name, record_id, details }]);
+    if (error) {
+      console.warn('Activity logging disabled due to permissions:', error.message);
+    }
+  } catch (e) {
+    // Silently fail - logging is not critical
+  }
 }
 
 // ============ PARTNERS CRUD ============
