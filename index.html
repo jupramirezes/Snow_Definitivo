@@ -465,6 +465,27 @@
           <div id="partnersContainer"></div>
         </div>
       </div>
+      
+      <!-- Gestión de Encargados por POS -->
+      <div class="col-12">
+        <div class="tile">
+          <h6>Encargados por POS</h6>
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label">Encargado de Barra</label>
+              <input id="encargadoBarra" class="form-control form-control-sm" placeholder="Nombre del encargado">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Encargado de Granizados</label>
+              <input id="encargadoGranizados" class="form-control form-control-sm" placeholder="Nombre del encargado">
+            </div>
+            <div class="col-12">
+              <button id="btnGuardarEncargados" class="btn btn-success btn-sm">Guardar Encargados</button>
+            </div>
+          </div>
+          <div id="encargadosActuales" class="mt-2"></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -845,6 +866,7 @@
       document.getElementById('empSalary').value = '';
       
       await loadEmployees();
+      await updateDashboard();
     } catch(e) {
       alert('Error agregando empleado: ' + e.message);
     }
@@ -935,17 +957,6 @@
     const date = getSelectedDate();
     const time = new Date().toTimeString().slice(0,8);
     
-    // Validar datos
-    const errors = validateSaleData({
-      date, product_id, qty, pay_method, 
-      cash_amount: pay_method === 'Mixto' ? cash_amount : 0,
-      transfer_amount: pay_method === 'Mixto' ? transfer_amount : 0
-    });
-    
-    if (!showValidationErrors(errors)) {
-      return;
-    }
-    
     // Obtener cash_amount y transfer_amount según método de pago
     let cash_amount = 0;
     let transfer_amount = 0;
@@ -954,6 +965,27 @@
       cash_amount = +document.getElementById('ventaEfectivo').value || 0;
       transfer_amount = +document.getElementById('ventaTransferencia').value || 0;
     }
+    
+    // Validar datos básicos (simplificado)
+    if (!product_id) {
+      showValidationErrors(['Debe seleccionar un producto']);
+      return;
+    }
+    
+    if (!qty || qty <= 0) {
+      showValidationErrors(['La cantidad debe ser mayor a 0']);
+      return;
+    }
+    
+    if (pay_method === 'Mixto') {
+      if ((cash_amount + transfer_amount) <= 0) {
+        showValidationErrors(['En pago mixto debe especificar efectivo y/o transferencia']);
+        return;
+      }
+    }
+    
+    // Limpiar errores si todo está bien
+    showValidationErrors([]);
     
     try{
       if(editingSale){
@@ -1185,14 +1217,19 @@
     employees.forEach(emp => {
       html += `
         <div class="col-12">
-          <div class="form-check d-flex justify-content-between align-items-center p-2" style="background: white; border: 1px solid #dee2e6; border-radius: 4px;">
-            <div>
+          <div class="d-flex justify-content-between align-items-center p-2" style="background: white; border: 1px solid #dee2e6; border-radius: 4px;">
+            <div class="form-check">
               <input class="form-check-input" type="checkbox" value="${emp.id}" id="emp${emp.id}">
               <label class="form-check-label" for="emp${emp.id}">
                 <strong>${emp.name}</strong> - ${emp.role}
               </label>
             </div>
-            <span class="badge bg-primary">${money(emp.daily_salary)}</span>
+            <div class="d-flex align-items-center gap-2">
+              <label class="small">$</label>
+              <input type="number" min="0" value="${emp.daily_salary}" 
+                     class="form-control form-control-sm salary-input" 
+                     id="salary_${emp.id}" style="width:100px;">
+            </div>
           </div>
         </div>`;
     });
@@ -1213,10 +1250,12 @@
     const selectedEmps = Array.from(checkedInputs).map(input => {
       const empId = input.value;
       const emp = employees.find(e => e.id == empId);
+      const salaryInput = document.getElementById(`salary_${empId}`);
+      const actualSalary = salaryInput ? (+salaryInput.value || emp.daily_salary) : emp.daily_salary;
       return {
         name: emp.name,
         role: emp.role,
-        salary: emp.daily_salary
+        salary: actualSalary
       };
     });
     
@@ -1227,6 +1266,7 @@
       // Limpiar selección
       document.getElementById('nominaContainer').innerHTML = '';
       document.getElementById('btnPagarNomina').style.display = 'none';
+      await updateDashboard(); // ACTUALIZAR INTERFAZ
       
     } catch(e) {
       console.error('Error registrando nómina:', e);
@@ -1247,6 +1287,7 @@
       await addPurchase({date,pos,product_id,qty,unit_cost,notes,file});
       alert('Compra registrada');
       document.getElementById('compraCant').value=1; document.getElementById('compraPU').value=0; document.getElementById('compraNotas').value=''; document.getElementById('compraFile').value='';
+      await updateDashboard(); // ACTUALIZAR INTERFAZ
     }catch(e){ console.error(e); alert('Error guardando compra'); }
   });
 
@@ -1258,7 +1299,16 @@
     const attributed_to = document.getElementById('gastoAtrib').value.trim();
     const notes = document.getElementById('gastoNotas').value.trim();
     const date = getSelectedDate();
-    try{ await addExpense({date,type,concept,amount,attributed_to,notes}); alert('Gasto registrado'); }catch(e){ alert('Error guardando gasto'); }
+    try{ 
+      await addExpense({date,type,concept,amount,attributed_to,notes}); 
+      alert('Gasto registrado');
+      // Limpiar form
+      document.getElementById('gastoConcepto').value = '';
+      document.getElementById('gastoValor').value = '';
+      document.getElementById('gastoAtrib').value = '';
+      document.getElementById('gastoNotas').value = '';
+      await updateDashboard(); // ACTUALIZAR INTERFAZ
+    }catch(e){ alert('Error guardando gasto'); }
   });
 
   // ===== Cierres Básicos (mantener funcionalidad original) =====
@@ -1427,7 +1477,8 @@
     if (newName && newShare && parseFloat(newShare) >= 0) {
       try {
         await updatePartner(id, { name: newName.trim(), share_pct: parseFloat(newShare) });
-        await loadPartners();
+        await loadPartners(); // Recargar lista
+        await updateDashboard(); // Actualizar dashboard
         alert('Socio actualizado exitosamente');
       } catch(e) {
         alert('Error actualizando socio: ' + e.message);
@@ -1442,7 +1493,8 @@
     if (confirm(`¿Eliminar socio "${partner.name}"?`)) {
       try {
         await deletePartner(id);
-        await loadPartners();
+        await loadPartners(); // Recargar lista
+        await updateDashboard(); // Actualizar dashboard
         alert('Socio eliminado exitosamente');
       } catch(e) {
         alert('Error eliminando socio: ' + e.message);
@@ -1472,6 +1524,55 @@
       alert('Error agregando socio: ' + e.message);
     }
   });
+
+  // ============ GESTIÓN DE ENCARGADOS ============
+  document.getElementById('btnGuardarEncargados').addEventListener('click', async () => {
+    const encargadoBarra = document.getElementById('encargadoBarra').value.trim();
+    const encargadoGranizados = document.getElementById('encargadoGranizados').value.trim();
+    
+    if (!encargadoBarra || !encargadoGranizados) {
+      return alert('Debe especificar encargados para ambos POS');
+    }
+    
+    try {
+      // Guardar en localStorage por ahora (luego podemos mover a Supabase si es necesario)
+      localStorage.setItem('encargados', JSON.stringify({
+        Barra: encargadoBarra,
+        Granizados: encargadoGranizados
+      }));
+      
+      alert('Encargados guardados exitosamente');
+      mostrarEncargadosActuales();
+      
+      // Limpiar form
+      document.getElementById('encargadoBarra').value = '';
+      document.getElementById('encargadoGranizados').value = '';
+    } catch(e) {
+      alert('Error guardando encargados: ' + e.message);
+    }
+  });
+
+  function mostrarEncargadosActuales() {
+    const encargados = JSON.parse(localStorage.getItem('encargados') || '{}');
+    const container = document.getElementById('encargadosActuales');
+    
+    if (encargados.Barra && encargados.Granizados) {
+      container.innerHTML = `
+        <div class="alert alert-info">
+          <strong>Encargados actuales:</strong><br>
+          🍸 Barra: ${encargados.Barra}<br>
+          🧊 Granizados: ${encargados.Granizados}
+        </div>
+      `;
+    } else {
+      container.innerHTML = '<div class="text-muted">No hay encargados configurados</div>';
+    }
+  }
+
+  // Función global para obtener encargados
+  window.getEncargados = function() {
+    return JSON.parse(localStorage.getItem('encargados') || '{}');
+  };
 
   // ============ FUNCIONES GLOBALES DE UTILIDAD ============
   window.resetAllDataConfirm = async function() {
@@ -1548,6 +1649,7 @@
   await loadPartners();
   await renderVentas();
   await updateDashboard();
+  mostrarEncargadosActuales(); // Mostrar encargados guardados
   
   // Auto-refresh dashboard cada 30 segundos
   setInterval(updateDashboard, 30000);
