@@ -51,7 +51,7 @@ export async function updateProduct(id, updates) {
 export async function deleteProduct(id) {
   const { error } = await supabase
     .from("products")
-    .update({ active: false })
+    .delete()
     .eq("id", id);
   if (error) throw error;
 }
@@ -74,6 +74,12 @@ export async function addEmployee({ name, role, daily_salary }) {
     .select("*")
     .single();
   if (error) throw error;
+  await logActivity({
+    action: 'CREATE_EMPLOYEE',
+    table_name: 'employees',
+    record_id: data.id,
+    details: { name, role, daily_salary }
+  });
   return data;
 }
 
@@ -217,6 +223,13 @@ export async function addSale({
       });
   }
 
+  await logActivity({
+    action: 'CREATE_SALE',
+    table_name: 'sales',
+    record_id: data.id,
+    details: { pos, product_id, qty, pay_method, cash_amount, transfer_amount }
+  });
+
   return data;
 }
 
@@ -352,6 +365,14 @@ export async function addPurchase({
     kind: "purchase",
     ref_id: data.id,
   });
+
+  await logActivity({
+    action: 'CREATE_PURCHASE',
+    table_name: 'purchases',
+    record_id: data.id,
+    details: { pos, product_id, qty, unit_cost }
+  });
+
   return data;
 }
 
@@ -370,6 +391,14 @@ export async function addExpense({
     .select("*")
     .single();
   if (error) throw error;
+
+  await logActivity({
+    action: 'CREATE_EXPENSE',
+    table_name: 'expenses',
+    record_id: data.id,
+    details: { type, concept, amount, attributed_to }
+  });
+
   return data;
 }
 
@@ -464,3 +493,165 @@ export async function fetchRangeClose(desde, hasta) {
   ]);
   return { sales, expenses, purchases, counts, managers, partners, weeklyExpenses };
 }
+
+// ============ ACTIVITY LOG ============
+export async function logActivity({ action, table_name, record_id, details }) {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const time = now.toTimeString().slice(0, 8);
+  
+  const { error } = await supabase
+    .from("activity_log")
+    .insert([{ date, time, action, table_name, record_id, details }]);
+  if (error) console.error('Error logging activity:', error);
+}
+
+// ============ PARTNERS CRUD ============
+export async function getPartners() {
+  const { data, error } = await supabase
+    .from("partners")
+    .select("*")
+    .order("name");
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addPartner({ name, share_pct }) {
+  const { data, error } = await supabase
+    .from("partners")
+    .insert([{ name, share_pct }])
+    .select("*")
+    .single();
+  if (error) throw error;
+  await logActivity({
+    action: 'CREATE_PARTNER',
+    table_name: 'partners',
+    record_id: data.id,
+    details: { name, share_pct }
+  });
+  return data;
+}
+
+export async function updatePartner(id, updates) {
+  const { data, error } = await supabase
+    .from("partners")
+    .update(updates)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  await logActivity({
+    action: 'UPDATE_PARTNER',
+    table_name: 'partners',
+    record_id: id,
+    details: updates
+  });
+  return data;
+}
+
+export async function deletePartner(id) {
+  const { error } = await supabase
+    .from("partners")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+  await logActivity({
+    action: 'DELETE_PARTNER',
+    table_name: 'partners',
+    record_id: id,
+    details: {}
+  });
+}
+
+// ============ VALIDATE DATA ============
+export function validateSaleData({ date, product_id, qty, pay_method, cash_amount, transfer_amount }) {
+  const errors = [];
+  
+  // Validar fecha no futura
+  const today = new Date().toISOString().slice(0, 10);
+  if (date > today) {
+    errors.push('No se pueden registrar ventas en fechas futuras');
+  }
+  
+  // Validar producto
+  if (!product_id) {
+    errors.push('Debe seleccionar un producto');
+  }
+  
+  // Validar cantidad
+  if (!qty || qty <= 0) {
+    errors.push('La cantidad debe ser mayor a 0');
+  }
+  
+  // Validar método de pago
+  if (pay_method === 'Mixto' && (cash_amount + transfer_amount) <= 0) {
+    errors.push('En pago mixto debe especificar efectivo y/o transferencia');
+  }
+  
+  return errors;
+}
+
+// ============ RESET DATA ============
+export async function resetAllData() {
+  const tables = ['sales', 'purchases', 'expenses', 'inventory_moves', 'inventory_counts', 'activity_log'];
+  
+  for (const table of tables) {
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+    
+    if (error) {
+      console.error(`Error clearing ${table}:`, error);
+      throw error;
+    }
+  }
+  
+  await logActivity({
+    action: 'RESET_ALL_DATA',
+    table_name: 'system',
+    record_id: null,
+    details: { tables_cleared: tables }
+  });
+}
+
+// ============ COMPREHENSIVE DATA QUERIES ============
+export async function getDashboardData(date) {
+  const [
+    { data: sales },
+    { data: expenses },
+    { data: purchases },
+    { data: counts },
+    { data: recentLog }
+  ] = await Promise.all([
+    supabase
+      .from('sales')
+      .select('*, products(name,price,pos)')
+      .eq('date', date)
+      .order('time'),
+    supabase
+      .from('expenses')
+      .select('*')
+      .eq('date', date)
+      .order('created_at'),
+    supabase
+      .from('purchases')
+      .select('*, products(name,price)')
+      .eq('date', date)
+      .order('created_at'),
+    supabase
+      .from('inventory_counts')
+      .select('*, products(name,sku)')
+      .eq('count_date', date),
+    supabase
+      .from('activity_log')
+      .select('*')
+      .eq('date', date)
+      .order('time', { ascending: false })
+      .limit(20)
+  ]);
+  
+  return { sales: sales || [], expenses: expenses || [], purchases: purchases || [], counts: counts || [], recentLog: recentLog || [] };
+}
+
+// ============ UPDATE EXISTING FUNCTIONS WITH LOGGING ============

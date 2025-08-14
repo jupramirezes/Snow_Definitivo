@@ -1,7 +1,7 @@
 -- SCHEMA v2 (sin IF NOT EXISTS en CREATE POLICY)
 -- Tipos
 create type pos_enum as enum ('Barra','Granizados');
-create type pay_enum as enum ('Efectivo','Transferencia');
+create type pay_enum as enum ('Efectivo','Transferencia','Mixto');
 create type expense_enum as enum ('Gasto','Nomina','DescuentoSocio');
 create type move_enum as enum ('sale','purchase','adjust');
 
@@ -65,6 +65,8 @@ create table sales (
   product_id uuid references products(id) on delete set null,
   qty integer not null check (qty > 0),
   pay_method pay_enum not null,
+  cash_amount integer not null default 0,
+  transfer_amount integer not null default 0,
   discount_partner integer not null default 0,
   shortage integer not null default 0,
   notes text,
@@ -97,6 +99,15 @@ create table expenses (
   created_at timestamptz default now()
 );
 
+create table employees (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  role text not null,
+  daily_salary integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz default now()
+);
+
 create table debts (
   id uuid primary key default gen_random_uuid(),
   date date not null,
@@ -104,6 +115,18 @@ create table debts (
   reason text not null,
   amount integer not null,
   balance integer not null,
+  created_at timestamptz default now()
+);
+
+create table activity_log (
+  id uuid primary key default gen_random_uuid(),
+  date date not null,
+  time time not null,
+  action text not null,
+  table_name text not null,
+  record_id uuid,
+  details jsonb,
+  created_by uuid,
   created_at timestamptz default now()
 );
 
@@ -124,7 +147,9 @@ alter table inventory_moves enable row level security;
 alter table purchases enable row level security;
 alter table sales enable row level security;
 alter table expenses enable row level security;
+alter table employees enable row level security;
 alter table debts enable row level security;
+alter table activity_log enable row level security;
 
 -- Borrar políticas si existen (para reruns) y recrearlas
 -- partners
@@ -177,8 +202,22 @@ drop policy if exists insert_auth_expenses on expenses;
 create policy select_all_expenses on expenses for select using (true);
 create policy insert_auth_expenses on expenses for insert with check (auth.role() = 'authenticated');
 
+-- employees
+drop policy if exists select_all_employees on employees;
+drop policy if exists insert_auth_employees on employees;
+drop policy if exists update_auth_employees on employees;
+create policy select_all_employees on employees for select using (true);
+create policy insert_auth_employees on employees for insert with check (auth.role() = 'authenticated');
+create policy update_auth_employees on employees for update using (auth.role() = 'authenticated');
+
 -- debts
 drop policy if exists select_all_debts on debts;
 drop policy if exists insert_auth_debts on debts;
 create policy select_all_debts on debts for select using (true);
 create policy insert_auth_debts on debts for insert with check (auth.role() = 'authenticated');
+
+-- activity_log
+drop policy if exists select_all_activity_log on activity_log;
+drop policy if exists insert_auth_activity_log on activity_log;
+create policy select_all_activity_log on activity_log for select using (true);
+create policy insert_auth_activity_log on activity_log for insert with check (auth.role() = 'authenticated');
