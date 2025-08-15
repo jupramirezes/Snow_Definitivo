@@ -10,61 +10,38 @@ async function updateDashboard() {
     
     // KPIs principales
     const kpisContainer = document.getElementById('dashboardKPIs');
-    if (kpisContainer) {
-      kpisContainer.innerHTML = `
-        <div class="col-6 col-md-3">
-          <div class="kpi-card">
-            <div class="kpi-value">${money(dashData.totalVentas)}</div>
-            <div class="kpi-label">Ventas del día</div>
-          </div>
+    if (!kpisContainer) return;
+    
+    kpisContainer.innerHTML = `
+      <div class="col-6 col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-value">${money(dashData.totalVentas)}</div>
+          <div class="kpi-label">Ventas del día</div>
         </div>
-        <div class="col-6 col-md-3">
-          <div class="kpi-card">
-            <div class="kpi-value">${money(dashData.totalGastos)}</div>
-            <div class="kpi-label">Gastos del día</div>
-          </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-value">${money(dashData.totalGastos)}</div>
+          <div class="kpi-label">Gastos del día</div>
         </div>
-        <div class="col-6 col-md-3">
-          <div class="kpi-card">
-            <div class="kpi-value">${money(dashData.totalVentas - dashData.totalGastos)}</div>
-            <div class="kpi-label">Ganancia bruta</div>
-          </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-value">${money(dashData.totalVentas - dashData.totalGastos)}</div>
+          <div class="kpi-label">Ganancia bruta</div>
         </div>
-        <div class="col-6 col-md-3">
-          <div class="kpi-card">
-            <div class="kpi-value">${dashData.ventasCount || 0}</div>
-            <div class="kpi-label">N° Ventas</div>
-          </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-value">${dashData.ventasCount || 0}</div>
+          <div class="kpi-label">N° Ventas</div>
         </div>
-      `;
-    }
-
-    // Actualizar métricas mini del dashboard
-    updateActivitySummary(dashData);
+      </div>
+    `;
 
     console.log('📊 Dashboard actualizado:', dashData);
   } catch(e) {
     console.error('Error updating dashboard:', e);
-  }
-}
-
-// Nueva función para actualizar el resumen de actividad
-function updateActivitySummary(dashData) {
-  const ventasCountEl = document.getElementById('ventasCount');
-  const comprasCountEl = document.getElementById('comprasCount');
-  const lastActivityEl = document.getElementById('lastActivity');
-  
-  if (ventasCountEl) {
-    ventasCountEl.textContent = dashData.sales?.length || 0;
-  }
-  
-  if (comprasCountEl) {
-    comprasCountEl.textContent = dashData.purchases?.length || 0;
-  }
-  
-  if (lastActivityEl && dashData.recentLog && dashData.recentLog.length > 0) {
-    const lastLog = dashData.recentLog[0];
-    lastActivityEl.textContent = `${lastLog.time}: ${lastLog.action.replace(/_/g, ' ')}`;
   }
 }
 

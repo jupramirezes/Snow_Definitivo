@@ -282,54 +282,6 @@
 
 ---
 
----
-
-## [v1.4] - 2025-01-15 - MEJORAS UX/UI COMPLETAS ✅
-
-### ✅ Cambios Realizados:
-- **📱 Dashboard unificado:** Ventas rápidas + KPIs + actividad en una sola pantalla
-- **🧭 Navegación simplificada:** 4 pantallas principales (Dashboard, Operaciones, Cierres, Admin)
-- **🎨 `js/feedback.js`:** Sistema completo de notificaciones toast y validación (186 líneas)
-- **✨ Feedback visual:** Loading states, confirmaciones personalizadas, validación en tiempo real
-- **📐 CSS mejorado:** +195 líneas de estilos para UX/UI (animaciones, transiciones, responsive)
-- **🚀 Formularios optimizados:** Menos campos visibles, validación inmediata, mejor flujo
-
-### 🧪 Testing:
-- [x] ✅ **Dashboard unificado funcional** - Ventas rápidas integradas
-- [x] ✅ **Navegación simplificada** - Solo 3 botones principales + admin
-- [x] ✅ **Archivos CSS/JS cargan** - Referencias y sintaxis validadas
-- [x] ✅ **Nuevas clases aplicadas** - quick-action-card, metric-mini, toast-notification
-- [x] ✅ **Sistema responsive** - Adaptación móvil/desktop
-
-### 📊 Impacto:
-- **Rendimiento:** 🟢 MEJOR - Menos navegación entre pantallas
-- **Usabilidad:** 🟢 EXCELENTE - Todo visible desde dashboard principal
-- **Mantenibilidad:** 🟢 MEJOR - Sistema de feedback centralizado
-- **Experiencia móvil:** 🟢 MUCHO MEJOR - Diseño responsive optimizado
-
-### 🚨 Problemas/Rollbacks:
-- **Ninguno** - Funcionalidad preservada, UX mejorada
-
-### 📁 Archivos Modificados:
-- `index.html` - Dashboard unificado, navegación simplificada
-- `styles/main.css` - +195 líneas de mejoras UX/UI
-- `js/app.js` - Actualización de dashboard con métricas mini
-- `js/feedback.js` - NUEVO - Sistema completo de feedback visual
-
-### 💾 Backup Creado:
-- `backups/v1.4_pre_ux_improvements/`
-
-### 🎯 **FASE 2 COMPLETADA:**
-- ✅ Dashboard unificado con info clave visible
-- ✅ Navegación simplificada (máximo 4 pantallas)
-- ✅ Formularios optimizados y validación en tiempo real
-- ✅ Feedback visual (loading, confirmaciones, errores claros)
-
-### 🎯 **LISTO PARA PRODUCCIÓN:**
-**✅ COMMIT Y PUSH AL REPOSITORIO**
-
----
-
 **📅 Documento creado:** 2025-01-15  
 **🔄 Actualizar después de cada cambio**  
-**📋 Próxima entrada:** v1.5 - Fase 3 (Optimización técnica) o Testing en producción
+**📋 Próxima entrada:** v1.4 - Fase 2 del plan de refactorización

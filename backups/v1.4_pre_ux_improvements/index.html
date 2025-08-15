@@ -17,7 +17,6 @@
   <script src="./js/ui-helpers.js"></script>
   <script src="./js/business-logic.js"></script>
   <script src="./js/app.js"></script>
-  <script src="./js/feedback.js"></script>
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || "{{SUPABASE_URL}}";
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "{{SUPABASE_ANON_KEY}}";
@@ -37,105 +36,97 @@
   </header>
 
   <section id="home" class="tile">
-    <!-- Dashboard unificado con KPIs y acceso rápido -->
-    <div id="dashboardKPIs" class="row g-2 mb-4"></div>
+    <!-- Dashboard de KPIs -->
+    <div id="dashboardKPIs" class="row g-2 mb-3"></div>
     
-    <!-- Panel de ventas rápidas integrado -->
-    <div class="row g-3 mb-4">
-      <div class="col-12 col-lg-6">
-        <div class="quick-action-card">
-          <h6 class="mb-3">🍺 Venta Rápida</h6>
-          <div class="row g-2">
-            <div class="col-6">
-              <select id="ventaPOS" class="form-select"><option>Barra</option><option>Granizados</option></select>
-            </div>
-            <div class="col-6">
-              <select id="ventaProd" class="form-select"></select>
-            </div>
-            <div class="col-4">
-              <input id="ventaCant" type="number" min="1" value="1" class="form-control" placeholder="Cant.">
-            </div>
-            <div class="col-4">
-              <select id="ventaPago" class="form-select">
-                <option>Efectivo</option>
-                <option>Transferencia</option>
-                <option>Mixto</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <button id="btnAddVenta" class="btn btn-success w-100">Vender</button>
-            </div>
-            <div class="col-12">
-              <input id="ventaNotas" class="form-control form-control-sm" placeholder="Mesa/promoción (opcional)">
-            </div>
-            <!-- Campos mixto -->
-            <div id="mixtoFields" class="col-12 mixto-fields">
-              <div class="row g-2">
-                <div class="col-6">
-                  <input id="ventaEfectivo" type="number" min="0" value="0" class="form-control" placeholder="Efectivo $">
-                </div>
-                <div class="col-6">
-                  <input id="ventaTransferencia" type="number" min="0" value="0" class="form-control" placeholder="Transferencia $">
-                </div>
-                <div class="col-12">
-                  <small class="text-muted">Total a pagar: <span id="totalAPagar">$0</span></small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-12 col-lg-6">
-        <div class="quick-action-card">
-          <h6 class="mb-3">📊 Actividad del Día</h6>
-          <div id="activitySummary" class="activity-summary">
-            <div class="row g-2 text-center">
-              <div class="col-6">
-                <div class="metric-mini">
-                  <div id="ventasCount" class="metric-value">0</div>
-                  <div class="metric-label">Ventas</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="metric-mini">
-                  <div id="comprasCount" class="metric-value">0</div>
-                  <div class="metric-label">Compras</div>
-                </div>
-              </div>
-            </div>
-            <div id="lastActivity" class="mt-2 text-muted small">Última actividad...</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Navegación simplificada -->
     <div class="row g-2">
-      <div class="col-12 col-md-4">
-        <button class="w-100 btn btn-primary btn-fat" data-goto="operaciones">
-          📦 Operaciones
-          <small class="d-block">Inventario • Compras • Gastos</small>
-        </button>
-      </div>
-      <div class="col-12 col-md-4">
-        <button class="w-100 btn btn-success btn-fat" data-goto="cierres">
-          💰 Cierres & Socios
-          <small class="d-block">Descuadres • Repartos • Informes</small>
-        </button>
-      </div>
-      <div class="col-12 col-md-4">
-        <button class="w-100 btn btn-warning btn-fat" data-goto="admin">
-          ⚙️ Administración
-          <small class="d-block">Productos • Empleados • Config</small>
-        </button>
-      </div>
+      <div class="col-12 col-md-3"><button class="w-100 btn btn-dark btn-fat" data-goto="mesero">Mesero · Venta rápida</button></div>
+      <div class="col-12 col-md-3"><button class="w-100 btn btn-dark btn-fat" data-goto="pos">Barra/Granizados · Inventario + Compras + Gastos</button></div>
+      <div class="col-12 col-md-3"><button class="w-100 btn btn-dark btn-fat" data-goto="socios">Socios · Cierres + Reparto</button></div>
+      <div class="col-12 col-md-3"><button class="w-100 btn btn-warning btn-fat" data-goto="admin">⚙️ Administración</button></div>
     </div>
   </section>
 
+  <!-- Mesero: Venta rápida -->
+  <section id="mesero" class="tile mt-3" hidden>
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="m-0">Ventas (Mesero)</h5>
+      <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
+    </div>
+    <div class="row g-2 mt-2">
+      <div class="col-6">
+        <label class="form-label">POS</label>
+        <select id="ventaPOS" class="form-select form-select-lg"><option>Barra</option><option>Granizados</option></select>
+      </div>
+      <div class="col-6">
+        <label class="form-label">Producto</label>
+        <select id="ventaProd" class="form-select form-select-lg"></select>
+      </div>
+      <div class="col-4">
+        <label class="form-label">Cant.</label>
+        <input id="ventaCant" type="number" min="1" value="1" class="form-control form-control-lg">
+      </div>
+      <div class="col-4">
+        <label class="form-label">Pago</label>
+        <select id="ventaPago" class="form-select form-select-lg">
+          <option>Efectivo</option>
+          <option>Transferencia</option>
+          <option>Mixto</option>
+        </select>
+      </div>
+      <div class="col-4">
+        <label class="form-label">Notas</label>
+        <input id="ventaNotas" class="form-control form-control-lg" placeholder="Mesa/promo">
+      </div>
 
-  <!-- Operaciones: Inventario, Compras y Gastos -->
-  <section id="operaciones" class="tile mt-3" hidden>
+      <!-- Campos para pago Mixto -->
+      <div id="mixtoFields" class="col-12 mixto-fields">
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Efectivo ($)</label>
+            <input id="ventaEfectivo" type="number" min="0" value="0" class="form-control form-control-lg">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Transferencia ($)</label>
+            <input id="ventaTransferencia" type="number" min="0" value="0" class="form-control form-control-lg">
+          </div>
+          <div class="col-12">
+            <small class="text-muted">Total a pagar: <span id="totalAPagar">$0</span></small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="muted-hint">Los <b>descuentos a socios</b> regístralos en POS → Gastos (tipo <i>DescuentoSocio</i>). El <b>descuadre</b> se calcula en el cierre diario con efectivo contado.</div>
+      </div>
+
+      <div class="col-12 d-grid">
+        <button id="btnAddVenta" class="btn btn-success btn-fat mt-2">Agregar venta</button>
+        <div id="saleValidationErrors" class="mt-2 text-danger small" style="display:none"></div>
+      </div>
+      
+      <!-- Actividad reciente -->
+      <div class="col-12">
+        <div class="tile mt-3">
+          <h6>📋 Actividad del día</h6>
+          <div id="activityLog" class="small"></div>
+        </div>
+      </div>
+    </div>
+    <div class="table-responsive mt-3">
+      <table class="table table-sm" id="tblVentas">
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Hora</th><th>POS</th><th>Producto</th><th>Cant</th><th>Pago</th><th>Total</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- POS -->
+  <section id="pos" class="tile mt-3" hidden>
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="m-0">Inventario · Compras · Gastos</h5>
       <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
@@ -299,8 +290,7 @@
   </section>
 
   <!-- Socios - VERSIÓN ACTUALIZADA CON NAVEGACIÓN DE CIERRES AVANZADOS -->
-  <!-- Cierres y Socios -->
-  <section id="cierres" class="tile mt-3" hidden>
+  <section id="socios" class="tile mt-3" hidden>
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="m-0">Cierres + Reparto</h5>
       <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
