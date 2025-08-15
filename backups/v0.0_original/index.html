@@ -8,13 +8,220 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#111111">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="./styles/main.css">
   <!-- Librerías para exportación -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="./export-utils.js?v=7"></script>
-  <!-- Módulos JavaScript organizados -->
-  <script src="./js/ui-helpers.js"></script>
+  <style>
+    :root { --pad: 14px; }
+    body { background:#f7f7f8; }
+    .app { max-width: 1080px; margin: 0 auto; padding: var(--pad); }
+    .tile { padding: 16px; border-radius: 16px; border:1px solid #eee; background:#fff; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+    .btn-fat { padding: 14px 16px; font-size: 18px; border-radius: 14px; }
+    .kpi { border-radius: 14px; padding: 10px 12px; background:#fff; border: 1px solid #eee; }
+    .kpi .v { font-weight:700; font-size: 18px; }
+    .pos-pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background:#111; color:#fff; }
+    .pos-Barra { background: #0d6efd; }
+    .pos-Granizados { background: #198754; }
+    .table-sm td, .table-sm th { padding: .45rem .5rem; }
+    .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #eee; padding: 8px 12px; z-index: 1000; }
+    .muted-hint{font-size:12px;color:#6c757d}
+    .mixto-fields { display: none; }
+    .mixto-fields.show { display: block; }
+    .admin-section { border-left: 4px solid #ffc107; background: #fffbf0; }
+    .editable-count { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 4px 8px; min-width: 60px; text-align: center; }
+    
+    /* ===== ESTILOS PARA CIERRES AVANZADOS ===== */
+    .nav-cierres {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .nav-cierre-btn {
+      background: white;
+      border: 2px solid #dee2e6;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .nav-cierre-btn:hover {
+      border-color: #0d6efd;
+      background: #e7f1ff;
+    }
+
+    .nav-cierre-btn.active {
+      background: #0d6efd;
+      color: white;
+      border-color: #0d6efd;
+    }
+
+    .cierre-container {
+      display: none;
+    }
+
+    .cierre-container.active {
+      display: block;
+    }
+
+    .inferencia-exitosa {
+      background: #d1edff;
+      border: 1px solid #0d6efd;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+
+    .descuadres-exitoso {
+      background: #d4edda;
+      border: 1px solid #28a745;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+
+    .deudor-card {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+      background: #f8f9fa;
+    }
+
+    .metrica-card {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border-left: 4px solid #0d6efd;
+      background: #f8f9fa;
+    }
+
+    .btn-inferir {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-inferir:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-inferir:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .gastos-extra-form {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+
+    .tabla-reparto-detalle {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .tabla-reparto-detalle th,
+    .tabla-reparto-detalle td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .tabla-reparto-detalle th {
+      background: #f8f9fa;
+      font-weight: bold;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    .kpi-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .kpi-value {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .kpi-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    
+    .activity-item {
+      border-left: 3px solid #0d6efd;
+      padding: 8px 12px;
+      margin: 5px 0;
+      background: #f8f9fa;
+      border-radius: 0 4px 4px 0;
+    }
+    
+    .partner-item {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 8px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .validation-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin: 5px 0;
+    }
+    
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin: 5px 0;
+    }
+
+    @media (max-width: 768px) {
+      .nav-cierres {
+        flex-direction: column;
+      }
+      .kpi-value {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || "{{SUPABASE_URL}}";
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "{{SUPABASE_ANON_KEY}}";
@@ -458,16 +665,8 @@
   };
   const getSelectedDate = () => document.getElementById('appDate').value || localISODate();
   document.getElementById('appDate').value = localISODate();
-  document.getElementById('appDate').addEventListener('change', async () => {
-    console.log('📅 Fecha cambiada, actualizando toda la interfaz...');
-    await renderVentas();
-    await updateDashboard();
-    // Limpiar cache de inventarios para nueva fecha
-    clearInventoryCache();
-    // Actualizar cierres si están visibles
-    if (document.querySelector('.cierre-container.active')) {
-      refreshActiveClosureView();
-    }
+  document.getElementById('appDate').addEventListener('change', () => {
+    renderVentas();
   });
 
   const goto = (id)=>['home','mesero','pos','socios','admin'].forEach(s=>document.getElementById(s).hidden=(s!==id));
@@ -806,7 +1005,7 @@
         });
         editingSale = null;
         document.getElementById('btnAddVenta').textContent = 'Agregar venta';
-        alert('✅ Venta actualizada');
+        alert('Venta actualizada');
       }else{
         await addSale({
           date,
@@ -819,7 +1018,7 @@
           transfer_amount,
           notes
         });
-        alert('✅ Venta registrada');
+        alert('Venta registrada');
       }
       
       // Limpiar formulario
@@ -830,8 +1029,8 @@
       document.getElementById('ventaPago').value = 'Efectivo';
       document.getElementById('mixtoFields').classList.remove('show');
       
-      // Actualización completa de la interfaz
-      await refreshAllUI();
+      await renderVentas();
+      await updateDashboard();
     }catch(e){ 
       console.error(e); 
       alert('Error guardando venta: ' + e.message); 
@@ -896,12 +1095,11 @@
         if(!confirm('¿Borrar venta? Esto revierte el inventario.')) return;
         try { 
           await deleteSale(el.dataset.del); 
-          await refreshAllUI(); // ACTUALIZACIÓN COMPLETA
-          alert('✅ Venta eliminada exitosamente');
+          await renderVentas(); 
         }
         catch(e){ 
           console.error(e); 
-          alert('❌ Error borrando: ' + e.message); 
+          alert('Error borrando: ' + e.message); 
         }
       };
     });
@@ -1116,9 +1314,9 @@
     const pos = products.find(p=>p.id===product_id)?.pos || 'Barra';
     try{
       await addPurchase({date,pos,product_id,qty,unit_cost,notes,file});
-      alert('✅ Compra registrada');
+      alert('Compra registrada');
       document.getElementById('compraCant').value=1; document.getElementById('compraPU').value=0; document.getElementById('compraNotas').value=''; document.getElementById('compraFile').value='';
-      await refreshAllUI(); // ACTUALIZACIÓN COMPLETA
+      await updateDashboard(); // ACTUALIZAR INTERFAZ
     }catch(e){ console.error(e); alert('Error guardando compra'); }
   });
 
@@ -1158,14 +1356,14 @@
     const date = getSelectedDate();
     try{ 
       await addExpense({date,type,concept,amount,attributed_to,notes}); 
-      alert('✅ Gasto registrado');
+      alert('Gasto registrado');
       // Limpiar form
       document.getElementById('gastoConcepto').value = '';
       document.getElementById('gastoValor').value = '';
       document.getElementById('gastoAtrib').value = '';
       document.getElementById('gastoSocioSelect').value = '';
       document.getElementById('gastoNotas').value = '';
-      await refreshAllUI(); // ACTUALIZACIÓN COMPLETA
+      await updateDashboard(); // ACTUALIZAR INTERFAZ
     }catch(e){ alert('Error guardando gasto'); }
   });
 
@@ -1599,9 +1797,6 @@
   await renderVentas();
   await updateDashboard();
   mostrarEncargadosActuales(); // Mostrar encargados guardados
-  
-  // ============ FUNCIONES DE SINCRONIZACIÓN ============
-  // (Funciones movidas a js/ui-helpers.js para mejor organización)
   
   // Auto-refresh dashboard cada 30 segundos
   setInterval(updateDashboard, 30000);

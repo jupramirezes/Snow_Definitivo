@@ -13,8 +13,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="./export-utils.js?v=7"></script>
-  <!-- Módulos JavaScript organizados -->
-  <script src="./js/ui-helpers.js"></script>
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || "{{SUPABASE_URL}}";
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "{{SUPABASE_ANON_KEY}}";
@@ -458,16 +456,8 @@
   };
   const getSelectedDate = () => document.getElementById('appDate').value || localISODate();
   document.getElementById('appDate').value = localISODate();
-  document.getElementById('appDate').addEventListener('change', async () => {
-    console.log('📅 Fecha cambiada, actualizando toda la interfaz...');
-    await renderVentas();
-    await updateDashboard();
-    // Limpiar cache de inventarios para nueva fecha
-    clearInventoryCache();
-    // Actualizar cierres si están visibles
-    if (document.querySelector('.cierre-container.active')) {
-      refreshActiveClosureView();
-    }
+  document.getElementById('appDate').addEventListener('change', () => {
+    renderVentas();
   });
 
   const goto = (id)=>['home','mesero','pos','socios','admin'].forEach(s=>document.getElementById(s).hidden=(s!==id));
@@ -806,7 +796,7 @@
         });
         editingSale = null;
         document.getElementById('btnAddVenta').textContent = 'Agregar venta';
-        alert('✅ Venta actualizada');
+        alert('Venta actualizada');
       }else{
         await addSale({
           date,
@@ -819,7 +809,7 @@
           transfer_amount,
           notes
         });
-        alert('✅ Venta registrada');
+        alert('Venta registrada');
       }
       
       // Limpiar formulario
@@ -830,8 +820,8 @@
       document.getElementById('ventaPago').value = 'Efectivo';
       document.getElementById('mixtoFields').classList.remove('show');
       
-      // Actualización completa de la interfaz
-      await refreshAllUI();
+      await renderVentas();
+      await updateDashboard();
     }catch(e){ 
       console.error(e); 
       alert('Error guardando venta: ' + e.message); 
@@ -896,12 +886,11 @@
         if(!confirm('¿Borrar venta? Esto revierte el inventario.')) return;
         try { 
           await deleteSale(el.dataset.del); 
-          await refreshAllUI(); // ACTUALIZACIÓN COMPLETA
-          alert('✅ Venta eliminada exitosamente');
+          await renderVentas(); 
         }
         catch(e){ 
           console.error(e); 
-          alert('❌ Error borrando: ' + e.message); 
+          alert('Error borrando: ' + e.message); 
         }
       };
     });
@@ -1116,9 +1105,9 @@
     const pos = products.find(p=>p.id===product_id)?.pos || 'Barra';
     try{
       await addPurchase({date,pos,product_id,qty,unit_cost,notes,file});
-      alert('✅ Compra registrada');
+      alert('Compra registrada');
       document.getElementById('compraCant').value=1; document.getElementById('compraPU').value=0; document.getElementById('compraNotas').value=''; document.getElementById('compraFile').value='';
-      await refreshAllUI(); // ACTUALIZACIÓN COMPLETA
+      await updateDashboard(); // ACTUALIZAR INTERFAZ
     }catch(e){ console.error(e); alert('Error guardando compra'); }
   });
 
@@ -1158,14 +1147,14 @@
     const date = getSelectedDate();
     try{ 
       await addExpense({date,type,concept,amount,attributed_to,notes}); 
-      alert('✅ Gasto registrado');
+      alert('Gasto registrado');
       // Limpiar form
       document.getElementById('gastoConcepto').value = '';
       document.getElementById('gastoValor').value = '';
       document.getElementById('gastoAtrib').value = '';
       document.getElementById('gastoSocioSelect').value = '';
       document.getElementById('gastoNotas').value = '';
-      await refreshAllUI(); // ACTUALIZACIÓN COMPLETA
+      await updateDashboard(); // ACTUALIZAR INTERFAZ
     }catch(e){ alert('Error guardando gasto'); }
   });
 
@@ -1599,9 +1588,6 @@
   await renderVentas();
   await updateDashboard();
   mostrarEncargadosActuales(); // Mostrar encargados guardados
-  
-  // ============ FUNCIONES DE SINCRONIZACIÓN ============
-  // (Funciones movidas a js/ui-helpers.js para mejor organización)
   
   // Auto-refresh dashboard cada 30 segundos
   setInterval(updateDashboard, 30000);
