@@ -13,6 +13,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="./export-utils.js?v=7"></script>
+  <!-- Supabase Client - CRÍTICO -->
+  <script src="./supabaseClient.js"></script>
   <!-- Módulos JavaScript organizados -->
   <script src="./js/ui-helpers.js"></script>
   <script src="./js/business-logic.js"></script>
@@ -1118,6 +1120,7 @@
   };
 
   // init
+  initializeNavigation(); // Inicializar navegación PRIMERO
   await loadProducts();
   await loadEmployees();
   await loadPartners();

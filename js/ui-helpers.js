@@ -124,11 +124,39 @@ function mostrarCierre(tipo) {
   }, 100);
 }
 
+// ============ NAVEGACIÓN ENTRE SECCIONES ============
+
+// Función principal de navegación
+const goto = (id) => {
+  const sections = ['home', 'operaciones', 'cierres', 'admin'];
+  sections.forEach(s => {
+    const element = document.getElementById(s);
+    if (element) {
+      element.hidden = (s !== id);
+    }
+  });
+  console.log(`🧭 Navegando a: ${id}`);
+};
+
+// Inicializar navegación cuando se carga la página
+function initializeNavigation() {
+  // Configurar event listeners para botones de navegación
+  document.querySelectorAll('[data-goto]').forEach(button => {
+    button.onclick = () => goto(button.dataset.goto);
+  });
+  
+  // Ir al home por defecto
+  goto('home');
+  
+  console.log('🧭 Sistema de navegación inicializado');
+}
+
 // Hacer funciones disponibles globalmente
 window.refreshAllUI = refreshAllUI;
 window.clearInventoryCache = clearInventoryCache;
 window.refreshActiveClosureView = refreshActiveClosureView;
 window.goto = goto;
+window.initializeNavigation = initializeNavigation;
 window.mostrarCierre = mostrarCierre;
 window.loadComprasDelDia = loadComprasDelDia;
 window.loadGastosDelDia = loadGastosDelDia;
