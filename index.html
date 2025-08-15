@@ -13,13 +13,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="./export-utils.js?v=7"></script>
-  <!-- Supabase Client - CRÍTICO -->
-  <script src="./supabaseClient.js"></script>
   <!-- Módulos JavaScript organizados -->
   <script src="./js/ui-helpers.js"></script>
-  <script src="./js/business-logic.js"></script>
-  <script src="./js/app.js"></script>
-  <script src="./js/feedback.js"></script>
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || "{{SUPABASE_URL}}";
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "{{SUPABASE_ANON_KEY}}";
@@ -39,6 +34,66 @@
   </header>
 
   <section id="home" class="tile">
+    <!-- FLUJO COMPLETO DEL NEGOCIO - GUÍA DETALLADA -->
+    <div class="row g-2 mb-4">
+      <div class="col-12">
+        <div class="alert alert-info">
+          <h6><strong>📋 FLUJO COMPLETO DEL CIERRE DIARIO - BAR CON 2 POS</strong></h6>
+          
+          <div class="row g-3 mt-2">
+            <div class="col-12 col-md-6">
+              <h6>🌅 <strong>INICIO DEL DÍA (8:00 AM)</strong></h6>
+              <ol class="small">
+                <li><strong>POS → Inventario:</strong> Contar stock inicial en BARRA y GRANIZADOS por separado</li>
+                <li><strong>Admin → Encargados:</strong> Asignar responsables por POS para descuadres</li>
+                <li><strong>Verificar productos:</strong> Que estén todos activos y con precios correctos</li>
+              </ol>
+              
+              <h6>🍺 <strong>DURANTE EL DÍA</strong></h6>
+              <ol class="small">
+                <li><strong>Ventas:</strong> Registrar cada venta especificando POS (Barra/Granizados) y método de pago</li>
+                <li><strong>POS → Compras:</strong> Registrar todas las compras con factura y POS correspondiente</li>
+                <li><strong>POS → Gastos:</strong> Registrar gastos operativos y descuentos a socios</li>
+              </ol>
+            </div>
+            
+            <div class="col-12 col-md-6">
+              <h6>🌙 <strong>CIERRE DEL DÍA (11:00 PM)</strong></h6>
+              <ol class="small">
+                <li><strong>POS → Inventario Final:</strong> Contar stock restante por POS</li>
+                <li><strong>Cierres → Cierre Diario:</strong> 
+                  <ul class="small">
+                    <li>🔍 <strong>Inferencia automática:</strong> Sistema calcula ventas faltantes por diferencia de inventario</li>
+                    <li>💰 <strong>Efectivo esperado:</strong> Suma todas las ventas en efectivo (registradas + inferidas)</li>
+                    <li>📊 <strong>Contar caja:</strong> Efectivo físico por POS</li>
+                    <li>⚖️ <strong>Descuadres:</strong> Diferencia entre esperado vs contado → se asigna al encargado</li>
+                  </ul>
+                </li>
+                <li><strong>Validación crítica:</strong> 
+                  <ul class="small">
+                    <li>Inicial + Compras - Final = Ventas registradas + inferidas</li>
+                    <li>Efectivo contado vs esperado = Descuadre del encargado</li>
+                  </ul>
+                </li>
+              </ol>
+              
+              <h6>📅 <strong>CIERRE SEMANAL (Domingos)</strong></h6>
+              <ol class="small">
+                <li><strong>Cierres → Reparto:</strong> Utilidad = Ventas - Gastos - Compras</li>
+                <li><strong>Distribución por %:</strong> Cada socio recibe según su participación (debe sumar 100%)</li>
+                <li><strong>Descuentos aplicados:</strong> Se restan del reparto del socio correspondiente</li>
+              </ol>
+            </div>
+          </div>
+          
+          <div class="mt-3 p-2 bg-warning text-dark rounded">
+            <strong>⚠️ CRÍTICO:</strong> Cada POS (Barra/Granizados) maneja inventario, efectivo y descuadres por separado. 
+            El sistema NO permite mezclar inventarios entre POS.
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Dashboard unificado con KPIs y acceso rápido -->
     <div id="dashboardKPIs" class="row g-2 mb-4"></div>
     
@@ -46,7 +101,7 @@
     <div class="row g-3 mb-4">
       <div class="col-12 col-lg-6">
         <div class="quick-action-card">
-          <h6 class="mb-3">🍺 Venta Rápida</h6>
+          <h6 class="mb-3">🍺 Registrar Venta por POS</h6>
           <div class="row g-2">
             <div class="col-6">
               <select id="ventaPOS" class="form-select"><option>Barra</option><option>Granizados</option></select>
@@ -68,7 +123,7 @@
               <button id="btnAddVenta" class="btn btn-success w-100">Vender</button>
             </div>
             <div class="col-12">
-              <input id="ventaNotas" class="form-control form-control-sm" placeholder="Mesa/promoción (opcional)">
+              <input id="ventaNotas" class="form-control form-control-sm" placeholder="Cliente/observación (opcional)">
             </div>
             <!-- Campos mixto -->
             <div id="mixtoFields" class="col-12 mixto-fields">
@@ -115,14 +170,14 @@
     <!-- Navegación simplificada -->
     <div class="row g-2">
       <div class="col-12 col-md-4">
-        <button class="w-100 btn btn-primary btn-fat" data-goto="operaciones">
-          📦 Operaciones
+        <button class="w-100 btn btn-primary btn-fat" data-goto="pos">
+          📦 POS · Barra/Granizados
           <small class="d-block">Inventario • Compras • Gastos</small>
         </button>
       </div>
       <div class="col-12 col-md-4">
-        <button class="w-100 btn btn-success btn-fat" data-goto="cierres">
-          💰 Cierres & Socios
+        <button class="w-100 btn btn-success btn-fat" data-goto="socios">
+          💰 Socios · Cierres
           <small class="d-block">Descuadres • Repartos • Informes</small>
         </button>
       </div>
@@ -136,8 +191,8 @@
   </section>
 
 
-  <!-- Operaciones: Inventario, Compras y Gastos -->
-  <section id="operaciones" class="tile mt-3" hidden>
+  <!-- POS: Inventario, Compras y Gastos -->
+  <section id="pos" class="tile mt-3" hidden>
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="m-0">Inventario · Compras · Gastos</h5>
       <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
@@ -301,8 +356,8 @@
   </section>
 
   <!-- Socios - VERSIÓN ACTUALIZADA CON NAVEGACIÓN DE CIERRES AVANZADOS -->
-  <!-- Cierres y Socios -->
-  <section id="cierres" class="tile mt-3" hidden>
+  <!-- Socios - Cierres y Repartos -->
+  <section id="socios" class="tile mt-3" hidden>
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="m-0">Cierres + Reparto</h5>
       <button class="btn btn-sm btn-outline-secondary" data-goto="home">Volver</button>
@@ -437,9 +492,7 @@
 
 <div id="health" style="position:fixed;right:8px;bottom:8px;font:12px system-ui;background:#111;color:#fff;padding:6px 10px;border-radius:8px;opacity:.9;z-index:9999">Cargando…</div>
 
-<!-- CARGAR SISTEMA DE CIERRES AVANZADOS -->
-<script src="cierre-avanzado.js?v=7"></script>
-
+<!-- Health check simple -->
 <script type="module">
   import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
   const ok = (t)=>{ const el=document.getElementById('health'); el.textContent=t; el.style.background='#198754'; };
@@ -450,692 +503,6 @@
     if(error) bad('Supabase: ERROR'); else ok('Supabase: OK');
     setTimeout(()=>document.getElementById('health').remove(), 2500);
   }catch(e){ bad('JS error'); }
-</script>
-  
-<script type="module">
-  import { 
-    supabase, q, money, 
-    getProducts, addProduct, updateProduct, deleteProduct,
-    getEmployees, addEmployee,
-    getPartners, addPartner, updatePartner, deletePartner,
-    addSale, addPurchase, addExpense, addPayrollDay,
-    upsertCounts, getCounts,
-    fetchDayClose, fetchRangeClose, deleteSale, deletePurchase, deleteExpense,
-    logActivity, validateSaleData, resetAllData, getDashboardData
-  } from './supabaseClient.js?v=7';
-
-  // ==== Fecha local consistente + getter del selector ====
-  const localISODate = () => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0,10);
-  };
-  const getSelectedDate = () => document.getElementById('appDate').value || localISODate();
-  document.getElementById('appDate').value = localISODate();
-  document.getElementById('appDate').addEventListener('change', async () => {
-    console.log('📅 Fecha cambiada, actualizando toda la interfaz...');
-    await renderVentas();
-    await updateDashboard();
-    // Limpiar cache de inventarios para nueva fecha
-    clearInventoryCache();
-    // Actualizar cierres si están visibles
-    if (document.querySelector('.cierre-container.active')) {
-      refreshActiveClosureView();
-    }
-  });
-
-  const goto = (id)=>['home','mesero','pos','socios','admin'].forEach(s=>document.getElementById(s).hidden=(s!==id));
-  document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>goto(b.dataset.goto));
-  goto('home');
-
-  // ===== INTEGRACIÓN CON CIERRES AVANZADOS =====
-
-  // Funciones de navegación entre cierres
-  window.mostrarCierre = function(tipo) {
-    // Ocultar todos los contenedores
-    document.querySelectorAll('.cierre-container').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.nav-cierre-btn').forEach(btn => btn.classList.remove('active'));
-    
-    // Mostrar contenedor seleccionado
-    document.getElementById(`${tipo}-container`).classList.add('active');
-    document.querySelector(`[onclick="mostrarCierre('${tipo}')"]`).classList.add('active');
-    
-    // Inicializar datos específicos
-    setTimeout(() => {
-      switch(tipo) {
-        case 'diario':
-          if (typeof actualizarEfectivoEsperado === 'function') {
-            actualizarEfectivoEsperado();
-          }
-          break;
-        case 'semanal':
-          if (typeof inicializarCierreSemanal === 'function') {
-            inicializarCierreSemanal();
-          }
-          break;
-        case 'administracion':
-          if (typeof inicializarVistaAdministracion === 'function') {
-            inicializarVistaAdministracion();
-          }
-          break;
-      }
-    }, 100);
-  };
-
-  // Funciones globales necesarias para el sistema avanzado
-  window.supabase = supabase;
-  window.money = money;
-  window.getSelectedDate = getSelectedDate;
-  window.getDashboardData = getDashboardData;
-
-  // ============ PRODUCTOS ============
-
-
-  // Agregar producto
-  document.getElementById('btnAddProduct').addEventListener('click', async () => {
-    const sku = document.getElementById('prodSKU').value.trim();
-    const name = document.getElementById('prodName').value.trim();
-    const price = +document.getElementById('prodPrice').value || 0;
-    const pos = document.getElementById('prodPOS').value;
-    const vasos_per_unit = +document.getElementById('prodVasos').value || 0;
-
-    if (!sku || !name || price <= 0) {
-      return alert('Complete SKU, nombre y precio válido');
-    }
-
-    try {
-      await addProduct({ sku, name, price, pos, vasos_per_unit });
-      alert('Producto agregado');
-      
-      // Limpiar form
-      document.getElementById('prodSKU').value = '';
-      document.getElementById('prodName').value = '';
-      document.getElementById('prodPrice').value = '';
-      document.getElementById('prodVasos').value = '0';
-      
-      await loadProducts();
-    } catch(e) {
-      console.error(e);
-      alert('Error agregando producto: ' + e.message);
-    }
-  });
-
-  // ============ EMPLEADOS ============
-
-  // Agregar empleado
-  document.getElementById('btnAddEmployee').addEventListener('click', async () => {
-    const name = document.getElementById('empName').value.trim();
-    const role = document.getElementById('empRole').value.trim();
-    const daily_salary = +document.getElementById('empSalary').value || 0;
-
-    if (!name || !role || daily_salary <= 0) {
-      return alert('Complete nombre, cargo y salario válido');
-    }
-
-    try {
-      await addEmployee({ name, role, daily_salary });
-      alert('Empleado agregado');
-      
-      // Limpiar form
-      document.getElementById('empName').value = '';
-      document.getElementById('empRole').value = '';
-      document.getElementById('empSalary').value = '';
-      
-      await loadEmployees();
-      await updateDashboard();
-    } catch(e) {
-      alert('Error agregando empleado: ' + e.message);
-    }
-  });
-
-  // ============ MANEJO DE PAGO MIXTO ============
-
-  // Mostrar/ocultar campos mixto
-  document.getElementById('ventaPago').addEventListener('change', function() {
-    const payMethod = this.value;
-    const mixtoFields = document.getElementById('mixtoFields');
-    
-    if (payMethod === 'Mixto') {
-      mixtoFields.classList.add('show');
-      updateTotalAPagar();
-    } else {
-      mixtoFields.classList.remove('show');
-      document.getElementById('ventaEfectivo').value = 0;
-      document.getElementById('ventaTransferencia').value = 0;
-    }
-  });
-
-  // Actualizar total cuando cambie producto o cantidad
-  document.getElementById('ventaProd').addEventListener('change', updateTotalAPagar);
-  document.getElementById('ventaCant').addEventListener('input', updateTotalAPagar);
-
-  document.getElementById('ventaEfectivo').addEventListener('input', updateTotalAPagar);
-  document.getElementById('ventaTransferencia').addEventListener('input', updateTotalAPagar);
-  document.getElementById('ventaPOS').addEventListener('change', rebuildSelects);
-
-  // Estado edición
-  let editingSale = null;
-  
-  // Add / Update sale
-  document.getElementById('btnAddVenta').addEventListener('click', async()=>{
-    const pos = document.getElementById('ventaPOS').value;
-    const product_id = document.getElementById('ventaProd').value;
-    const qty = +document.getElementById('ventaCant').value || 1;
-    const pay_method = document.getElementById('ventaPago').value;
-    const notes = document.getElementById('ventaNotas').value.trim();
-    const date = getSelectedDate();
-    const time = new Date().toTimeString().slice(0,8);
-    
-    // Obtener cash_amount y transfer_amount según método de pago
-    let cash_amount = 0;
-    let transfer_amount = 0;
-    
-    if (pay_method === 'Mixto') {
-      cash_amount = +document.getElementById('ventaEfectivo').value || 0;
-      transfer_amount = +document.getElementById('ventaTransferencia').value || 0;
-    }
-    
-    // Validar datos básicos (simplificado)
-    if (!product_id) {
-      showValidationErrors(['Debe seleccionar un producto']);
-      return;
-    }
-    
-    if (!qty || qty <= 0) {
-      showValidationErrors(['La cantidad debe ser mayor a 0']);
-      return;
-    }
-    
-    if (pay_method === 'Mixto') {
-      if ((cash_amount + transfer_amount) <= 0) {
-        showValidationErrors(['En pago mixto debe especificar efectivo y/o transferencia']);
-        return;
-      }
-    }
-    
-    // Limpiar errores si todo está bien
-    showValidationErrors([]);
-    
-    try{
-      if(editingSale){
-        await deleteSale(editingSale.id);
-        await addSale({
-          date,
-          time: editingSale.time || time,
-          pos,
-          product_id,
-          qty,
-          pay_method,
-          cash_amount,
-          transfer_amount,
-          notes
-        });
-        editingSale = null;
-        document.getElementById('btnAddVenta').textContent = 'Agregar venta';
-        alert('✅ Venta actualizada');
-      }else{
-        await addSale({
-          date,
-          time,
-          pos,
-          product_id,
-          qty,
-          pay_method,
-          cash_amount,
-          transfer_amount,
-          notes
-        });
-        alert('✅ Venta registrada');
-      }
-      
-      // Limpiar formulario
-      document.getElementById('ventaCant').value = 1;
-      document.getElementById('ventaNotas').value = '';
-      document.getElementById('ventaEfectivo').value = 0;
-      document.getElementById('ventaTransferencia').value = 0;
-      document.getElementById('ventaPago').value = 'Efectivo';
-      document.getElementById('mixtoFields').classList.remove('show');
-      
-      // Actualización completa de la interfaz
-      await refreshAllUI();
-    }catch(e){ 
-      console.error(e); 
-      alert('Error guardando venta: ' + e.message); 
-    }
-  });
-
-
-  // ============ INVENTARIO MEJORADO ============
-
-  document.getElementById('btnCargarConteo').addEventListener('click', cargarInventario);
-
-  // Guardar inventario
-  document.getElementById('btnGuardarInventario').addEventListener('click', async () => {
-    const pos = document.getElementById('invPOS').value;
-    const date = getSelectedDate();
-    
-    const rows = [];
-    document.querySelectorAll('#inventarioContainer input[data-pid]').forEach(input => {
-      const pid = input.dataset.pid;
-      const type = input.dataset.type;
-      const value = +input.value || 0;
-      
-      let existing = rows.find(r => r.product_id === pid);
-      if (!existing) {
-        existing = { product_id: pid, initial_qty: 0, final_qty: 0 };
-        rows.push(existing);
-      }
-      
-      if (type === 'initial') existing.initial_qty = value;
-      if (type === 'final') existing.final_qty = value;
-    });
-    
-    try {
-      await upsertCounts({ date, pos, rows });
-      alert('✅ Inventario guardado exitosamente');
-      
-      // Guardar también en localStorage para persistencia
-      const cacheKey = `inventory_${pos}_${date}`;
-      const cacheData = {};
-      rows.forEach(row => {
-        cacheData[row.product_id] = {
-          initial_qty: row.initial_qty,
-          final_qty: row.final_qty
-        };
-      });
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      
-      console.log('Inventario guardado y cacheado para', pos, date);
-      await updateDashboard();
-    } catch(e) {
-      console.error('Error guardando inventario:', e);
-      alert('❌ Error guardando inventario: ' + e.message);
-    }
-  });
-
-  // ============ NÓMINA ============
-  let selectedEmployees = [];
-
-  document.getElementById('btnCargarEmpleados').addEventListener('click', () => {
-    if (employees.length === 0) {
-      return alert('No hay empleados registrados. Ve a Administración para agregar empleados.');
-    }
-    
-    let html = '<div class="row g-2">';
-    employees.forEach(emp => {
-      html += `
-        <div class="col-12">
-          <div class="d-flex justify-content-between align-items-center p-2" style="background: white; border: 1px solid #dee2e6; border-radius: 4px;">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" value="${emp.id}" id="emp${emp.id}">
-              <label class="form-check-label" for="emp${emp.id}">
-                <strong>${emp.name}</strong> - ${emp.role}
-              </label>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <label class="small">$</label>
-              <input type="number" min="0" value="${emp.daily_salary}" 
-                     class="form-control form-control-sm salary-input" 
-                     id="salary_${emp.id}" style="width:100px;">
-            </div>
-          </div>
-        </div>`;
-    });
-    html += '</div>';
-    
-    document.getElementById('nominaContainer').innerHTML = html;
-    document.getElementById('btnPagarNomina').style.display = 'block';
-  });
-
-  document.getElementById('btnPagarNomina').addEventListener('click', async () => {
-    const checkedInputs = document.querySelectorAll('#nominaContainer input[type="checkbox"]:checked');
-    
-    if (checkedInputs.length === 0) {
-      return alert('Selecciona al menos un empleado');
-    }
-    
-    const date = getSelectedDate();
-    const selectedEmps = Array.from(checkedInputs).map(input => {
-      const empId = input.value;
-      const emp = employees.find(e => e.id == empId);
-      const salaryInput = document.getElementById(`salary_${empId}`);
-      const actualSalary = salaryInput ? (+salaryInput.value || emp.daily_salary) : emp.daily_salary;
-      return {
-        name: emp.name,
-        role: emp.role,
-        salary: actualSalary
-      };
-    });
-    
-    try {
-      await addPayrollDay({ date, employees: selectedEmps });
-      alert(`Nómina registrada para ${selectedEmps.length} empleados`);
-      
-      // Limpiar selección
-      document.getElementById('nominaContainer').innerHTML = '';
-      document.getElementById('btnPagarNomina').style.display = 'none';
-      await updateDashboard(); // ACTUALIZAR INTERFAZ
-      
-    } catch(e) {
-      console.error('Error registrando nómina:', e);
-      alert('Error registrando nómina: ' + e.message);
-    }
-  });
-
-  // Purchases
-  document.getElementById('btnAddCompra').addEventListener('click', async()=>{
-    const product_id = document.getElementById('compraProd').value;
-    const qty = +document.getElementById('compraCant').value||0;
-    const unit_cost = +document.getElementById('compraPU').value||0;
-    const notes = document.getElementById('compraNotas').value.trim();
-    const file = document.getElementById('compraFile').files[0]||null;
-    const date = getSelectedDate();
-    const pos = products.find(p=>p.id===product_id)?.pos || 'Barra';
-    try{
-      await addPurchase({date,pos,product_id,qty,unit_cost,notes,file});
-      alert('✅ Compra registrada');
-      document.getElementById('compraCant').value=1; document.getElementById('compraPU').value=0; document.getElementById('compraNotas').value=''; document.getElementById('compraFile').value='';
-      await refreshAllUI(); // ACTUALIZACIÓN COMPLETA
-    }catch(e){ console.error(e); alert('Error guardando compra'); }
-  });
-
-  // Manejar cambio de tipo de gasto
-  document.getElementById('gastoTipo').addEventListener('change', function() {
-    const tipo = this.value;
-    const inputAtrib = document.getElementById('gastoAtrib');
-    const selectSocio = document.getElementById('gastoSocioSelect');
-    
-    if (tipo === 'DescuentoSocio') {
-      inputAtrib.style.display = 'none';
-      selectSocio.style.display = 'block';
-    } else {
-      inputAtrib.style.display = 'block';
-      selectSocio.style.display = 'none';
-    }
-  });
-
-  // Expenses
-  document.getElementById('btnAddGasto').addEventListener('click', async()=>{
-    const type = document.getElementById('gastoTipo').value;
-    const concept = document.getElementById('gastoConcepto').value.trim();
-    const amount = +document.getElementById('gastoValor').value||0;
-    
-    // Obtener attributed_to dependiendo del tipo
-    let attributed_to = '';
-    if (type === 'DescuentoSocio') {
-      attributed_to = document.getElementById('gastoSocioSelect').value;
-      if (!attributed_to) {
-        return alert('Debe seleccionar un socio para el descuento');
-      }
-    } else {
-      attributed_to = document.getElementById('gastoAtrib').value.trim();
-    }
-    
-    const notes = document.getElementById('gastoNotas').value.trim();
-    const date = getSelectedDate();
-    try{ 
-      await addExpense({date,type,concept,amount,attributed_to,notes}); 
-      alert('✅ Gasto registrado');
-      // Limpiar form
-      document.getElementById('gastoConcepto').value = '';
-      document.getElementById('gastoValor').value = '';
-      document.getElementById('gastoAtrib').value = '';
-      document.getElementById('gastoSocioSelect').value = '';
-      document.getElementById('gastoNotas').value = '';
-      await refreshAllUI(); // ACTUALIZACIÓN COMPLETA
-    }catch(e){ alert('Error guardando gasto'); }
-  });
-
-  // ===== Cierres Básicos (mantener funcionalidad original) =====
-  let cacheCierreDia = null;
-  document.getElementById('btnCierreDia').addEventListener('click', async()=>{
-    const f = document.getElementById('fechaDia').value || getSelectedDate();
-    const { sales, expenses } = await fetchDayClose(f);
-    const porPOS = (pos) => (sales||[]).filter(x=>x.pos===pos).reduce((acc,cur)=>{
-      acc.total += (cur.cash_amount + cur.transfer_amount); 
-      acc.ef += cur.cash_amount;
-      acc.tr += cur.transfer_amount;
-      return acc;
-    }, {total:0, ef:0, tr:0});
-    const barra = porPOS('Barra'); const grz = porPOS('Granizados');
-
-    let gto=0, nom=0, dss=0;
-    (expenses||[]).forEach(e=>{ if(e.type==='Gasto') gto+=e.amount; else if(e.type==='Nomina') nom+=e.amount; else if(e.type==='DescuentoSocio') dss+=e.amount; });
-
-    const efBarraEsp = barra.ef;
-    const efGrzEsp = grz.ef;
-    cacheCierreDia = { fecha:f, efBarraEsp, efGrzEsp };
-
-    document.getElementById('cierreDia').innerHTML = `
-      <div class="row g-2">
-        <div class="col-12 col-lg-6"><div class="tile"><h6>Barra</h6><div>Total: <b>${money(barra.total)}</b></div><div>Efectivo esperado: <b>${money(efBarraEsp)}</b> · Transf: ${money(barra.tr)}</div></div></div>
-        <div class="col-12 col-lg-6"><div class="tile"><h6>Granizados</h6><div>Total: <b>${money(grz.total)}</b></div><div>Efectivo esperado: <b>${money(efGrzEsp)}</b> · Transf: ${money(grz.tr)}</div></div></div>
-      </div>`;
-  });
-
-  document.getElementById('btnReset').addEventListener('click', ()=>{
-    if('caches' in window){ caches.keys().then(keys=>keys.forEach(k=>caches.delete(k))); }
-    alert('Cache PWA limpiada. (Los datos viven en Supabase)');
-  });
-
-  // ============ DASHBOARD Y KPIS ============
-  let partners = [];
-  
-
-  // ============ GESTIÓN DE SOCIOS ============
-
-  // Agregar socio
-  document.getElementById('btnAddPartner').addEventListener('click', async () => {
-    const name = document.getElementById('partnerName').value.trim();
-    const share_pct = parseFloat(document.getElementById('partnerShare').value) || 0;
-    
-    if (!name || share_pct <= 0) {
-      return alert('Complete nombre y porcentaje válido');
-    }
-    
-    try {
-      await addPartner({ name, share_pct });
-      alert('Socio agregado exitosamente');
-      
-      // Limpiar form
-      document.getElementById('partnerName').value = '';
-      document.getElementById('partnerShare').value = '';
-      
-      await loadPartners();
-    } catch(e) {
-      alert('Error agregando socio: ' + e.message);
-    }
-  });
-
-  // ============ GESTIÓN DE ENCARGADOS ============
-  document.getElementById('btnGuardarEncargados').addEventListener('click', async () => {
-    const encargadoBarra = document.getElementById('encargadoBarra').value.trim();
-    const encargadoGranizados = document.getElementById('encargadoGranizados').value.trim();
-    
-    if (!encargadoBarra || !encargadoGranizados) {
-      return alert('Debe especificar encargados para ambos POS');
-    }
-    
-    try {
-      // Guardar en localStorage por ahora (luego podemos mover a Supabase si es necesario)
-      localStorage.setItem('encargados', JSON.stringify({
-        Barra: encargadoBarra,
-        Granizados: encargadoGranizados
-      }));
-      
-      alert('Encargados guardados exitosamente');
-      mostrarEncargadosActuales();
-      
-      // Limpiar form
-      document.getElementById('encargadoBarra').value = '';
-      document.getElementById('encargadoGranizados').value = '';
-    } catch(e) {
-      alert('Error guardando encargados: ' + e.message);
-    }
-  });
-
-  function mostrarEncargadosActuales() {
-    const encargados = JSON.parse(localStorage.getItem('encargados') || '{}');
-    const container = document.getElementById('encargadosActuales');
-    
-    if (encargados.Barra && encargados.Granizados) {
-      container.innerHTML = `
-        <div class="alert alert-info">
-          <strong>Encargados actuales:</strong><br>
-          🍸 Barra: ${encargados.Barra}<br>
-          🧊 Granizados: ${encargados.Granizados}
-        </div>
-      `;
-    } else {
-      container.innerHTML = '<div class="text-muted">No hay encargados configurados</div>';
-    }
-  }
-
-  // Función global para obtener encargados
-  window.getEncargados = function() {
-    return JSON.parse(localStorage.getItem('encargados') || '{}');
-  };
-
-  // ============ FUNCIONES GLOBALES PARA EDITAR/BORRAR ============
-  window.editPurchase = function(id) {
-    alert('🚧 Función en desarrollo. Por ahora solo se pueden borrar compras.');
-  };
-
-  window.deletePurchase = async function(id) {
-    if (!confirm('¿Eliminar esta compra? Esto revertirá los cambios en el inventario.')) return;
-    
-    try {
-      await deletePurchase(id);
-      alert('✅ Compra eliminada exitosamente');
-      await updateDashboard();
-    } catch (e) {
-      alert('❌ Error eliminando compra: ' + e.message);
-    }
-  };
-
-  window.editExpense = function(id) {
-    alert('🚧 Función en desarrollo. Por ahora solo se pueden borrar gastos.');
-  };
-
-  window.deleteExpense = async function(id) {
-    if (!confirm('¿Eliminar este gasto?')) return;
-    
-    try {
-      await deleteExpense(id);
-      alert('✅ Gasto eliminado exitosamente');
-      await updateDashboard();
-    } catch (e) {
-      alert('❌ Error eliminando gasto: ' + e.message);
-    }
-  };
-
-  // ============ FUNCIONES GLOBALES DE UTILIDAD ============
-  window.resetAllDataConfirm = async function() {
-    alert(`🗑️ CÓMO BORRAR TODO SIEMPRE:
-
-1. Usa el botón "🗑️ Reset BD" (borra solo datos operativos)
-2. O en Supabase SQL Editor ejecuta:
-   DELETE FROM sales;
-   DELETE FROM purchases; 
-   DELETE FROM expenses;
-   DELETE FROM inventory_counts;
-   DELETE FROM inventory_moves;
-   DELETE FROM activity_log;
-
-3. En la app: Refresca (F5)
-
-✅ Se mantienen: productos, empleados, socios, encargados`);
-
-    const confirmed = confirm(
-      '⚠️ ADVERTENCIA: Esto borrará TODOS los datos operativos.\n\n' +
-      'Solo se mantendrán productos, empleados y socios.\n\n' +
-      '¿Continuar?'
-    );
-    
-    if (confirmed) {
-      const doubleConfirm = prompt('Escribe "BORRAR TODO" para confirmar:');
-      if (doubleConfirm === 'BORRAR TODO') {
-        try {
-          await resetAllData();
-          // Limpiar también localStorage
-          Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('inventory_') || key.startsWith('cache_')) {
-              localStorage.removeItem(key);
-            }
-          });
-          alert('✅ Todos los datos operativos eliminados exitosamente.');
-          location.reload();
-        } catch (e) {
-          alert('❌ Error al eliminar datos: ' + e.message);
-        }
-      }
-    }
-  };
-  
-  window.exportDailyData = async function() {
-    const date = getSelectedDate();
-    const format = prompt('¿En qué formato deseas exportar?\n\n1. PDF (reporte)\n2. Excel (datos)\n3. JSON (backup)\n4. Completo (PDF + Excel)', '4');
-    
-    try {
-      const data = await getDashboardData(date);
-      
-      switch(format) {
-        case '1':
-          await ExportUtils.exportDailyPDF(date, data);
-          alert('📄 Reporte PDF exportado exitosamente');
-          break;
-        case '2':
-          ExportUtils.exportToExcel(data, `datos_${date}.xlsx`);
-          alert('📊 Datos Excel exportados exitosamente');
-          break;
-        case '3':
-          const exportData = {
-            fecha: date,
-            ventas: data.sales,
-            gastos: data.expenses,
-            compras: data.purchases,
-            inventario: data.counts,
-            actividad: data.recentLog
-          };
-          
-          const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `backup_${date}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-          alert('💾 Backup JSON exportado exitosamente');
-          break;
-        case '4':
-        default:
-          await ExportUtils.exportCompleteReport(date);
-          alert('📊📄 Reporte completo exportado exitosamente (PDF + Excel)');
-          break;
-      }
-    } catch (e) {
-      alert('❌ Error al exportar: ' + e.message);
-      console.error('Export error:', e);
-    }
-  };
-
-  // init
-  initializeNavigation(); // Inicializar navegación PRIMERO
-  await loadProducts();
-  await loadEmployees();
-  await loadPartners();
-  await renderVentas();
-  await updateDashboard();
-  mostrarEncargadosActuales(); // Mostrar encargados guardados
-  
-  // ============ FUNCIONES DE SINCRONIZACIÓN ============
-  // (Funciones movidas a js/ui-helpers.js para mejor organización)
-  
-  // Auto-refresh dashboard cada 30 segundos
-  setInterval(updateDashboard, 30000);
-
-  // PWA SW register
-  if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js'); }
 </script>
 </body>
 </html>
